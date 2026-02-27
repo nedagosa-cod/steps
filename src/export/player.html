@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SimuBuild - Player</title>
+    <style>
+        /* ─────────────────────────────────────────────────────────────
+       Theme variables matching SimuBuild editor
+       ───────────────────────────────────────────────────────────── */
+        :root {
+            --color-canvas: #0a0d12;
+            --color-surface: #0d1117;
+            --color-border-subtle: rgba(255, 255, 255, 0.04);
+            --color-border: rgba(255, 255, 255, 0.08);
+            --color-border-strong: rgba(255, 255, 255, 0.14);
+            --color-text-primary: #e2eaf4;
+            --color-text-secondary: #8d9eb5;
+            --color-text-tertiary: #566375;
+            --color-text-muted: #363f4d;
+            --color-brand: #7c5cfc;
+            --color-brand-hover: #8b6dfd;
+            --color-trigger-click-bg: rgba(124, 92, 252, 0.28);
+            --color-trigger-click-border: rgba(124, 92, 252, 0.9);
+            --color-trigger-input-bg: rgba(56, 139, 253, 0.25);
+            --color-trigger-input-border: rgba(56, 139, 253, 0.9);
+            --color-trigger-input-caret: #388bfd;
+            --color-success-bg: rgba(46, 165, 103, 0.12);
+            --color-success-border: rgba(46, 165, 103, 0.5);
+            --color-success-text: #5ac98a;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+            background: rgba(10, 13, 18, 1);
+            /* Full dark canvas */
+            color: var(--color-text-primary);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            font-size: 13px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── Layout ── */
+        #app {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ── Top bar ── */
+        .top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 24px;
+            border-bottom: 1px solid var(--color-border-subtle);
+        }
+
+        .top-bar-left,
+        .top-bar-center,
+        .top-bar-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .brand {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--color-brand);
+        }
+
+        .screen-name {
+            font-size: 12px;
+            color: var(--color-text-secondary);
+        }
+
+        /* Step indicator */
+        .step-pills {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .step-pill {
+            height: 3px;
+            border-radius: 99px;
+            width: 5px;
+            background: var(--color-border);
+            transition: width 250ms, background 250ms;
+        }
+
+        .step-pill.active {
+            width: 18px;
+            background: var(--color-brand);
+        }
+
+        .step-pill.done {
+            background: var(--color-brand);
+        }
+
+        .step-text {
+            font-size: 10px;
+            color: var(--color-text-muted);
+            margin-left: 6px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ── Main image container ── */
+        .main-container {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            transition: opacity 280ms ease-out, transform 280ms ease-out, filter 280ms ease-out;
+        }
+
+        .main-container.transitioning {
+            opacity: 0;
+            transform: scale(0.98);
+            filter: blur(3px);
+        }
+
+        .image-wrapper {
+            position: relative;
+            max-width: 100%;
+            max-height: 100dvh;
+            display: inline-block;
+        }
+
+        .scene-image {
+            max-width: 100%;
+            max-height: 100dvh;
+            display: block;
+        }
+
+        .no-image-text {
+            font-size: 14px;
+            color: var(--color-text-muted);
+            pointer-events: none;
+        }
+
+        /* ── Triggers ── */
+        .trigger {
+            position: absolute;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 200ms ease-out;
+        }
+
+        .trigger-click {
+            background: var(--color-trigger-click-bg);
+            border: 1.5px solid var(--color-trigger-click-border);
+            cursor: pointer;
+        }
+
+        .trigger-input {
+            background: transparent;
+            border: 1.5px solid var(--color-trigger-input-border);
+            overflow: hidden;
+        }
+
+        .trigger-click:hover {
+            opacity: 0.8;
+        }
+
+        .trigger.done {
+            background: var(--color-success-bg);
+            border-color: var(--color-success-border);
+            cursor: default;
+            opacity: 1 !important;
+            pointer-events: none;
+        }
+
+        .trigger.blocked {
+            opacity: 0.35;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .trigger-check {
+            font-size: 14px;
+            color: var(--color-success-text);
+        }
+
+        .trigger-input input {
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 13, 18, 0.75);
+            border: none;
+            outline: none;
+            color: #e2eaf4;
+            font-size: clamp(11px, 1.3vw, 18px);
+            padding: 0 6px;
+            font-family: inherit;
+            caret-color: var(--color-trigger-input-caret);
+        }
+
+        .trigger-input input:disabled {
+            opacity: 0.5;
+        }
+
+        /* ── Progress row (bottom) ── */
+        .progress-row {
+            display: flex;
+            gap: 5px;
+            margin-top: 14px;
+            align-items: center;
+            transition: opacity 280ms ease-out;
+        }
+
+        .progress-row.transitioning {
+            opacity: 0;
+        }
+
+        .trigger-badge {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 9px;
+            border-radius: 20px;
+            border: 1px solid var(--color-border);
+            transition: all 250ms ease-out;
+        }
+
+        .trigger-badge.done {
+            border-color: rgba(46, 165, 103, 0.35);
+            background: rgba(46, 165, 103, 0.08);
+        }
+
+        .badge-icon {
+            font-size: 8px;
+            font-weight: 700;
+            color: var(--color-text-secondary);
+        }
+
+        .badge-label {
+            font-size: 9px;
+            font-weight: 400;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--color-text-secondary);
+        }
+
+        .trigger-badge.done .badge-icon,
+        .trigger-badge.done .badge-label {
+            color: var(--color-success-text);
+        }
+
+        .remaining-text {
+            font-size: 10px;
+            color: var(--color-text-muted);
+            margin-left: 2px;
+        }
+
+        /* ── Feedback ── */
+        .feedback {
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 14px;
+            border-radius: 7px;
+            font-size: 12px;
+            transition: opacity 200ms ease-out;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .feedback.show {
+            opacity: 1;
+        }
+
+        .feedback-error {
+            border: 1px solid rgba(192, 64, 64, 0.3);
+            background: rgba(192, 64, 64, 0.1);
+            color: #d97979;
+        }
+
+        .feedback-success {
+            border: 1px solid rgba(46, 165, 103, 0.3);
+            background: rgba(46, 165, 103, 0.1);
+            color: #5ac98a;
+            padding: 7px 18px;
+        }
+    </style>
+
+    <!-- Data injected by Exporter -->
+    <script src="alldata/data.js"></script>
+</head>
+
+<body>
+
+    <div id="app">
+        <div class="top-bar">
+            <div class="top-bar-left">
+                <span class="brand">Playback</span>
+                <span style="color:var(--color-border); font-size:12px;">·</span>
+                <span class="screen-name" id="ui-screen-name">Loading...</span>
+            </div>
+            <div class="top-bar-center" id="ui-step-indicator">
+                <!-- Pills injected here -->
+            </div>
+            <div class="top-bar-right"></div>
+        </div>
+
+        <div class="main-container" id="ui-main-container">
+            <div class="image-wrapper" id="ui-image-wrapper">
+                <!-- Image and triggers injected here -->
+            </div>
+        </div>
+
+        <div class="progress-row" id="ui-progress-row">
+            <!-- Badges injected here -->
+        </div>
+
+        <div class="feedback feedback-error" id="ui-error">Texto incorrecto. Intenta de nuevo.</div>
+        <div class="feedback feedback-success" id="ui-success">¡Simulación completada!</div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            if (!window.SIM_DATA || !window.SIM_DATA.nodes) {
+                document.getElementById("ui-screen-name").textContent = "Error: Datos no encontrados.";
+                return;
+            }
+
+            const { nodes, edges } = window.SIM_DATA;
+            if (nodes.length === 0) {
+                document.getElementById("ui-screen-name").textContent = "Simulación vacía.";
+                return;
+            }
+
+            // Compute node order linearly following edges
+            let order = [];
+            let cursor = (nodes.find(n => !edges.some(e => e.target === n.id)) || nodes[0]).id;
+            const visited = new Set();
+            while (cursor && !visited.has(cursor)) {
+                order.push(cursor);
+                visited.add(cursor);
+                const nextEdge = edges.find(e => e.source === cursor);
+                cursor = nextEdge ? nextEdge.target : null;
+            }
+
+            // State
+            let currentNodeId = order[0];
+            let completedTriggers = new Set();
+            let isTransitioning = false;
+            let errorTimer = null;
+
+            // Utilities
+            const getNode = id => nodes.find(n => n.id === id);
+            const getNextNodeId = () => {
+                const idx = order.indexOf(currentNodeId);
+                return idx < order.length - 1 ? order[idx + 1] : null;
+            };
+
+            // Ensure data has hotspots
+            const normalizeTriggers = (data) => {
+                let arr = [];
+                if (Array.isArray(data.triggers) && data.triggers.length > 0) arr = data.triggers;
+                else if (data.triggerType) {
+                    arr = [{ id: 't-1', type: data.triggerType, validationValue: data.validationValue || '', hotspot: data.hotspot || { x: 40, y: 40, w: 20, h: 10 } }];
+                }
+                return arr.map(t => ({ hotspot: { x: 30, y: 40, w: 20, h: 10 }, ...t }));
+            };
+
+            // UI Elements
+            const elScreenName = document.getElementById("ui-screen-name");
+            const elStepIndicator = document.getElementById("ui-step-indicator");
+            const elMainContainer = document.getElementById("ui-main-container");
+            const elImageWrapper = document.getElementById("ui-image-wrapper");
+            const elProgressRow = document.getElementById("ui-progress-row");
+            const elError = document.getElementById("ui-error");
+            const elSuccess = document.getElementById("ui-success");
+
+            const showError = () => {
+                if (errorTimer) clearTimeout(errorTimer);
+                elError.classList.add("show");
+                errorTimer = setTimeout(() => elError.classList.remove("show"), 2200);
+            };
+
+            const navigate = (targetId) => {
+                if (!targetId) {
+                    elSuccess.classList.add("show");
+                    return;
+                }
+                isTransitioning = true;
+                elMainContainer.classList.add("transitioning");
+                elProgressRow.classList.add("transitioning");
+                completedTriggers.clear();
+
+                setTimeout(() => {
+                    currentNodeId = targetId;
+                    render();
+                    elMainContainer.classList.remove("transitioning");
+                    elProgressRow.classList.remove("transitioning");
+                    isTransitioning = false;
+                }, 280);
+            };
+
+            const handleTriggerComplete = (tId, triggers) => {
+                completedTriggers.add(tId);
+                render(); // Re-render state to update badges/blocked states
+
+                const allDone = triggers.every(t => completedTriggers.has(t.id));
+                if (allDone) {
+                    setTimeout(() => navigate(getNextNodeId()), 350);
+                }
+            };
+
+            const render = () => {
+                const node = getNode(currentNodeId);
+                const data = node.data;
+                const triggers = normalizeTriggers(data);
+                const stepIndex = order.indexOf(currentNodeId);
+
+                // Header
+                elScreenName.textContent = data.label || "Sin nombre";
+
+                // Pills
+                let pillsHtml = `<div class="step-pills">`;
+                for (let i = 0; i < order.length; i++) {
+                    let cls = "step-pill";
+                    if (i === stepIndex) cls += " active";
+                    else if (i < stepIndex) cls += " done";
+                    pillsHtml += `<div class="${cls}"></div>`;
+                }
+                pillsHtml += `<span class="step-text">${stepIndex + 1}/${order.length}</span></div>`;
+                elStepIndicator.innerHTML = pillsHtml;
+
+                // Image / Canvas
+                let canvasHtml = "";
+                if (data.image) {
+                    canvasHtml += `<img src="${data.image}" class="scene-image" draggable="false" />`;
+                } else {
+                    canvasHtml += `<span class="no-image-text">Sin imagen en este nodo</span>`;
+                }
+
+                elImageWrapper.innerHTML = canvasHtml;
+
+                // Triggers
+                triggers.forEach(t => {
+                    const hs = t.hotspot;
+                    const isDone = completedTriggers.has(t.id);
+                    const isBlocked = t.dependsOn && !completedTriggers.has(t.dependsOn);
+
+                    let el = document.createElement("div");
+                    el.className = `trigger trigger-${t.type}`;
+                    if (isDone) el.classList.add("done");
+                    else if (isBlocked) el.classList.add("blocked");
+
+                    el.style.left = `${hs.x}%`;
+                    el.style.top = `${hs.y}%`;
+                    el.style.width = `${hs.w}%`;
+                    el.style.height = `${hs.h}%`;
+
+                    if (t.type === 'click') {
+                        if (isDone) {
+                            el.innerHTML = `<span class="trigger-check">✓</span>`;
+                        } else {
+                            el.onclick = () => {
+                                if (!isTransitioning && !isDone && !isBlocked) {
+                                    handleTriggerComplete(t.id, triggers);
+                                }
+                            };
+                        }
+                    } else if (t.type === 'input') {
+                        if (isDone) {
+                            el.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--color-success-bg);"><span class="trigger-check">✓</span></div>`;
+                        } else {
+                            let inp = document.createElement("input");
+                            inp.type = "text";
+                            inp.placeholder = t.validationValue ? `"${t.validationValue}"` : '…';
+                            if (isBlocked) inp.disabled = true;
+
+                            inp.oninput = (e) => {
+                                const val = e.target.value.trim();
+                                const expected = (t.validationValue || '').trim();
+                                if (expected && val === expected && !isBlocked) {
+                                    handleTriggerComplete(t.id, triggers);
+                                }
+                            };
+
+                            inp.onkeydown = (e) => {
+                                if (e.key === 'Enter' && !isBlocked) {
+                                    const val = e.target.value.trim();
+                                    const expected = (t.validationValue || '').trim();
+                                    if (!expected || val === expected) {
+                                        handleTriggerComplete(t.id, triggers);
+                                    } else {
+                                        showError();
+                                    }
+                                }
+                            };
+                            el.appendChild(inp);
+                        }
+                    }
+                    elImageWrapper.appendChild(el);
+                });
+
+                // Progress Badges
+                if (triggers.length > 1) {
+                    let reqHtml = triggers.map(t => {
+                        const done = completedTriggers.has(t.id);
+                        return `<div class="trigger-badge ${done ? 'done' : ''}">
+              <span class="badge-icon">${done ? '✓' : '○'}</span>
+              <span class="badge-label">${t.type}</span>
+            </div>`;
+                    }).join("");
+
+                    const remaining = triggers.length - completedTriggers.size;
+                    if (remaining > 0) {
+                        reqHtml += `<span class="remaining-text">${remaining} restante${remaining !== 1 ? 's' : ''}</span>`;
+                    }
+                    elProgressRow.innerHTML = reqHtml;
+                } else {
+                    elProgressRow.innerHTML = "";
+                }
+            };
+
+            // Initial render
+            render();
+        });
+    </script>
+</body>
+
+</html>

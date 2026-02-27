@@ -15,7 +15,8 @@ import ScreenNode from './components/ScreenNode'
 import NodeConfigPanel from './components/NodeConfigPanel'
 import PreviewMode from './components/PreviewMode'
 
-import { GitBranch, Plus, Play, Settings2, Trash2, Layers } from 'lucide-react'
+import { GitBranch, Plus, Play, Settings2, Trash2, Layers, Download } from 'lucide-react'
+import { exportSimulator } from './utils/exporter'
 
 // Must be stable — defined outside component
 const nodeTypes = { screenNode: ScreenNode }
@@ -35,11 +36,19 @@ export default function App() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [selectedNode, setSelectedNode] = useState(null)
   const [isPreview, setIsPreview] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
 
   const onConnect = useCallback(
     (params) => setEdges((eds) => addEdge({ ...params, ...edgeDefaults }, eds)),
     [setEdges]
   )
+
+  const handleExport = useCallback(async () => {
+    if (nodes.length === 0) return
+    setIsExporting(true)
+    await exportSimulator(nodes, edges)
+    setIsExporting(false)
+  }, [nodes, edges])
 
   const onNodeClick = useCallback((_, node) => setSelectedNode(node), [])
   const onPaneClick = useCallback(() => setSelectedNode(null), [])
@@ -150,6 +159,11 @@ export default function App() {
             <GhostBtn onClick={addScreenNode}>
               <Plus size={12} style={{ marginRight: 5 }} />
               Nueva pantalla
+            </GhostBtn>
+
+            <GhostBtn onClick={handleExport} disabled={nodes.length === 0 || isExporting}>
+              <Download size={12} style={{ marginRight: 5 }} />
+              {isExporting ? 'Exportando...' : 'Exportar'}
             </GhostBtn>
 
             <PrimaryBtn

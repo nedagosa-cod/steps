@@ -267,29 +267,28 @@ export default function PreviewMode({ nodes, edges, onExit }) {
 
             {/* ── Main image container ── */}
             <div style={{
-                maxWidth: 920, width: '88vw',
-                borderRadius: 12, border: '1px solid var(--color-border)',
-                overflow: 'hidden',
-                boxShadow: '0 24px 80px rgba(0,0,0,0.7)',
+                position: 'fixed', inset: 0, zIndex: -1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: '#000',
                 transition: 'opacity 280ms ease-out, transform 280ms ease-out, filter 280ms ease-out',
                 opacity: transitioning ? 0 : 1,
-                transform: transitioning ? 'scale(0.98) translateY(6px)' : 'scale(1) translateY(0)',
+                transform: transitioning ? 'scale(0.98)' : 'scale(1)',
                 filter: transitioning ? 'blur(3px)' : 'blur(0)',
-                position: 'relative',
             }}>
                 {data.image ? (
-                    <div ref={imgWrapperRef} style={{ position: 'relative', lineHeight: 0 }}>
+                    <div ref={imgWrapperRef} style={{ position: 'relative', maxWidth: '100%', maxHeight: '100dvh', display: 'inline-block' }}>
                         <img
                             src={data.image}
                             alt="screen"
                             draggable={false}
-                            style={{ width: '100%', height: '60vh', objectFit: 'cover', display: 'block' }}
+                            style={{ maxWidth: '100%', maxHeight: '100dvh', display: 'block' }}
                         />
+                        {/* Overlay trigger positions relative to the tight wrapper. */}
                         {renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
                     </div>
                 ) : (
-                    <div ref={imgWrapperRef} style={{ position: 'relative', height: '60vh', background: 'var(--color-canvas)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: 13, color: 'var(--color-text-muted)', pointerEvents: 'none' }}>Sin imagen en este nodo</span>
+                    <div ref={imgWrapperRef} style={{ position: 'relative', width: '100vw', height: '100dvh', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 14, color: 'var(--color-text-muted)', pointerEvents: 'none' }}>Sin imagen en este nodo</span>
                         {renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
                     </div>
                 )}

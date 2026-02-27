@@ -56,16 +56,16 @@ const ScreenNode = memo(({ data, selected }) => {
             </div>
 
             {/* ── Image area with trigger overlays ── */}
-            <div style={{ position: 'relative', height: 176, background: 'var(--color-canvas)' }}>
+            <div style={{ position: 'relative', width: '100%', background: 'var(--color-canvas)' }}>
                 {/* Background: image or placeholder */}
                 {image ? (
                     <img
                         src={image} alt="Screen" draggable={false}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        style={{ width: '100%', height: 'auto', display: 'block' }}
                     />
                 ) : (
                     <div style={{
-                        width: '100%', height: '100%',
+                        width: '100%', height: 176,
                         display: 'flex', flexDirection: 'column',
                         alignItems: 'center', justifyContent: 'center', gap: 8,
                         pointerEvents: 'none',

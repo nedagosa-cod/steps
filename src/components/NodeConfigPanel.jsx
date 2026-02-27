@@ -296,10 +296,10 @@ export default function NodeConfigPanel({ node, onUpdateNode }) {
                     style={{
                         position: 'relative', borderRadius: 7, overflow: 'hidden',
                         border: '1px solid var(--color-border)', cursor: 'pointer',
-                        display: 'block', width: '100%', background: 'none', padding: 0,
+                        display: 'block', width: '100%', background: '#000', padding: 0,
                     }}
                 >
-                    <img src={data.image} alt="preview" style={{ width: '100%', height: 110, objectFit: 'cover', display: 'block' }} />
+                    <img src={data.image} alt="preview" style={{ width: '100%', height: 160, objectFit: 'contain', display: 'block' }} />
                     <div
                         style={{
                             position: 'absolute', inset: 0, background: 'rgba(10,13,18,0.65)',
