@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react'
+import React, { useState, useCallback } from 'react'
 import ReactFlow, {
   Background,
   Controls,
@@ -15,66 +15,49 @@ import ScreenNode from './components/ScreenNode'
 import NodeConfigPanel from './components/NodeConfigPanel'
 import PreviewMode from './components/PreviewMode'
 
-import { Monitor, Play, Plus, Layers, Settings2, Trash2, GitBranch } from 'lucide-react'
+import { GitBranch, Plus, Play, Settings2, Trash2, Layers } from 'lucide-react'
 
-// ------------------------------------------------------------------
-// Node type registry (must be stable — defined outside component)
-// ------------------------------------------------------------------
+// Must be stable — defined outside component
 const nodeTypes = { screenNode: ScreenNode }
 
-// ------------------------------------------------------------------
-// Edge defaults
-// ------------------------------------------------------------------
 const edgeDefaults = {
   type: 'smoothstep',
   animated: true,
-  markerEnd: { type: MarkerType.ArrowClosed, color: '#6e40c9' },
-  style: { stroke: '#6e40c9', strokeWidth: 2.5 },
+  markerEnd: { type: MarkerType.ArrowClosed, color: '#7c5cfc' },
+  style: { stroke: '#7c5cfc', strokeWidth: 1.5, opacity: 0.6 },
 }
 
-// ------------------------------------------------------------------
-// App
-// ------------------------------------------------------------------
 let nodeCounter = 1
 
+// ── App ──────────────────────────────────────────────────────────
 export default function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [selectedNode, setSelectedNode] = useState(null)
   const [isPreview, setIsPreview] = useState(false)
 
-  // ------------------------------------------------------------------
-  // Handlers
-  // ------------------------------------------------------------------
   const onConnect = useCallback(
     (params) => setEdges((eds) => addEdge({ ...params, ...edgeDefaults }, eds)),
     [setEdges]
   )
 
-  const onNodeClick = useCallback((_, node) => {
-    setSelectedNode(node)
-  }, [])
-
-  const onPaneClick = useCallback(() => {
-    setSelectedNode(null)
-  }, [])
+  const onNodeClick = useCallback((_, node) => setSelectedNode(node), [])
+  const onPaneClick = useCallback(() => setSelectedNode(null), [])
 
   const addScreenNode = useCallback(() => {
     const id = `node-${nodeCounter++}`
-    const newNode = {
+    const n = {
       id,
       type: 'screenNode',
-      position: { x: 100 + Math.random() * 300, y: 100 + Math.random() * 200 },
+      position: { x: 120 + Math.random() * 280, y: 80 + Math.random() * 180 },
       data: {
         label: `Pantalla ${nodeCounter - 1}`,
         image: null,
-        triggerType: 'click',
-        validationValue: '',
-        hotspot: { x: 40, y: 40, w: 20, h: 20 },
+        triggers: [], // multi-trigger array (empty = no advance)
       },
     }
-    setNodes((nds) => [...nds, newNode])
-    setSelectedNode(newNode)
+    setNodes((nds) => [...nds, n])
+    setSelectedNode(n)
   }, [setNodes])
 
   const deleteSelectedNode = useCallback(() => {
@@ -88,203 +71,398 @@ export default function App() {
 
   const onUpdateNode = useCallback((id, patch) => {
     setNodes((nds) =>
-      nds.map((n) =>
-        n.id === id ? { ...n, data: { ...n.data, ...patch } } : n
-      )
+      nds.map((n) => n.id === id ? { ...n, data: { ...n.data, ...patch } } : n)
     )
-    // Keep selectedNode in sync
     setSelectedNode((prev) =>
       prev?.id === id ? { ...prev, data: { ...prev.data, ...patch } } : prev
     )
   }, [setNodes])
 
-  // When nodes change externally (drag, etc.) keep selectedNode reference fresh
-  const onNodesChangeWrapped = useCallback((changes) => {
-    onNodesChange(changes)
-    // If position changed for the selected node, update its data reference slightly
-    // (no-op — ReactFlow keeps the data stable so node config still applies)
-  }, [onNodesChange])
+  // ── Styles ──────────────────────────────────────────────────────
+  const S = styles
 
-  // ------------------------------------------------------------------
-  // Render
-  // ------------------------------------------------------------------
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#0d1117] font-sans">
-      {/* Preview overlay */}
+    <div style={S.root}>
       {isPreview && (
-        <PreviewMode
-          nodes={nodes}
-          edges={edges}
-          onExit={() => setIsPreview(false)}
-        />
+        <PreviewMode nodes={nodes} edges={edges} onExit={() => setIsPreview(false)} />
       )}
 
-      {/* ── LEFT TOOLBAR ── */}
-      <aside className="flex flex-col gap-3 w-[68px] bg-[#161b22] border-r border-[#30363d] items-center py-4 z-10 shrink-0">
+      {/* ── LEFT TOOLBAR ─────────────────────────────────────── */}
+      <aside style={S.leftBar}>
         {/* Logo */}
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-[#6e40c9] to-[#7c3aed] shadow-lg mb-4">
-          <GitBranch size={18} className="text-white" />
+        <div style={S.logo}>
+          <GitBranch size={15} color="#fff" />
         </div>
 
-        <Divider />
+        {/* Separator */}
+        <div style={S.sep} />
 
         {/* Add node */}
-        <ToolButton
+        <ToolBtn
+          title="Añadir pantalla (N)"
           onClick={addScreenNode}
-          title="Añadir pantalla"
-          icon={<Plus size={18} />}
-          active={false}
-        />
-
-        <Divider />
-
-        {/* Stats: node count */}
-        <div className="flex flex-col items-center gap-0.5 mt-1">
-          <span className="text-xs font-bold text-[#e6edf3]">{nodes.length}</span>
-          <span className="text-[9px] text-[#484f58] uppercase tracking-wider">nodos</span>
-        </div>
-        <div className="flex flex-col items-center gap-0.5">
-          <span className="text-xs font-bold text-[#e6edf3]">{edges.length}</span>
-          <span className="text-[9px] text-[#484f58] uppercase tracking-wider">links</span>
-        </div>
+        >
+          <Plus size={16} />
+        </ToolBtn>
 
         {/* Spacer */}
-        <div className="flex-1" />
+        <div style={{ flex: 1 }} />
+
+        {/* Counters */}
+        <div style={S.counter}>
+          <span style={S.counterNum}>{nodes.length}</span>
+          <span style={S.counterLabel}>nodos</span>
+        </div>
+        <div style={{ ...S.counter, marginBottom: 8 }}>
+          <span style={S.counterNum}>{edges.length}</span>
+          <span style={S.counterLabel}>links</span>
+        </div>
 
         {/* Delete selected */}
         {selectedNode && (
-          <ToolButton
-            onClick={deleteSelectedNode}
-            title="Eliminar nodo seleccionado"
-            icon={<Trash2 size={18} />}
-            danger
-          />
+          <>
+            <div style={S.sep} />
+            <ToolBtn title="Eliminar nodo" onClick={deleteSelectedNode} danger>
+              <Trash2 size={15} />
+            </ToolBtn>
+          </>
         )}
       </aside>
 
-      {/* ── MAIN CANVAS ── */}
-      <main className="flex-1 flex flex-col min-w-0">
-        {/* Top bar */}
-        <header className="flex items-center justify-between px-5 h-12 border-b border-[#30363d] bg-[#161b22] shrink-0 z-10">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-bold tracking-tight text-[#e6edf3]">SimuBuild</span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#6e40c9]/20 text-[#a78bfa] border border-[#6e40c9]/30">
-              Editor
-            </span>
+      {/* ── MAIN CANVAS ──────────────────────────────────────── */}
+      <main style={S.main}>
+        {/* Header */}
+        <header style={S.header}>
+          {/* Brand */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={S.brandName}>SimuBuild</span>
+            <span style={S.editorBadge}>Editor</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Actions */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {nodes.length === 0 && (
-              <span className="text-xs text-[#484f58]">Añade una pantalla para empezar →</span>
+              <span style={{ fontSize: 11, color: 'var(--color-text-muted)', marginRight: 4 }}>
+                Añade una pantalla para empezar
+              </span>
             )}
-            <button
-              onClick={addScreenNode}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#21262d] border border-[#30363d] text-[#e6edf3] hover:border-[#484f58] transition-all"
-            >
-              <Plus size={13} />
-              Nueva pantalla
-            </button>
 
-            <button
+            <GhostBtn onClick={addScreenNode}>
+              <Plus size={12} style={{ marginRight: 5 }} />
+              Nueva pantalla
+            </GhostBtn>
+
+            <PrimaryBtn
               onClick={() => nodes.length > 0 && setIsPreview(true)}
               disabled={nodes.length === 0}
-              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${nodes.length > 0
-                  ? 'bg-[#6e40c9] hover:bg-[#7c3aed] text-white shadow-[0_0_14px_rgba(110,64,201,0.4)]'
-                  : 'bg-[#21262d] text-[#484f58] cursor-not-allowed'
-                }`}
             >
-              <Play size={13} />
+              <Play size={12} style={{ marginRight: 5 }} />
               Preview
-            </button>
+            </PrimaryBtn>
           </div>
         </header>
 
         {/* Canvas */}
-        <div className="flex-1 relative">
+        <div style={{ flex: 1, position: 'relative' }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
-            onNodesChange={onNodesChangeWrapped}
+            onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             nodeTypes={nodeTypes}
             onNodeClick={onNodeClick}
             onPaneClick={onPaneClick}
             fitView
-            fitViewOptions={{ padding: 0.3 }}
+            fitViewOptions={{ padding: 0.35 }}
             defaultEdgeOptions={edgeDefaults}
             proOptions={{ hideAttribution: true }}
           >
             <Background
               variant={BackgroundVariant.Dots}
-              gap={24}
+              gap={20}
               size={1}
-              color="#21262d"
+              color="rgba(255,255,255,0.035)"
             />
             <Controls />
             <MiniMap
-              nodeColor="#6e40c9"
-              maskColor="rgba(13,17,23,0.8)"
+              nodeColor="rgba(124,92,252,0.5)"
+              maskColor="rgba(10,13,18,0.82)"
             />
           </ReactFlow>
 
           {/* Empty state */}
           {nodes.length === 0 && (
-            <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center gap-5">
-              <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[#6e40c9]/20 to-[#7c3aed]/5 border border-[#30363d] flex items-center justify-center">
-                <Layers size={32} className="text-[#6e40c9]" />
+            <div style={S.emptyState}>
+              <div style={S.emptyIcon}>
+                <Layers size={26} color="var(--color-brand)" />
               </div>
-              <div className="text-center">
-                <p className="text-base font-semibold text-[#e6edf3]">Tu canvas está vacío</p>
-                <p className="text-sm text-[#8b949e] mt-1">Haz clic en <strong className="text-[#a78bfa]">Nueva pantalla</strong> para comenzar</p>
-              </div>
+              <p style={S.emptyTitle}>Canvas vacío</p>
+              <p style={S.emptyHint}>
+                Haz clic en <strong style={{ color: 'var(--color-text-secondary)' }}>Nueva pantalla</strong> para comenzar
+              </p>
             </div>
           )}
         </div>
       </main>
 
-      {/* ── RIGHT CONFIG PANEL ── */}
-      <aside className="w-[280px] bg-[#161b22] border-l border-[#30363d] flex flex-col shrink-0 z-10">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-[#30363d]">
-          <Settings2 size={14} className="text-[#6e40c9]" />
-          <span className="text-xs font-semibold text-[#e6edf3]">Configuración</span>
+      {/* ── RIGHT CONFIG PANEL ────────────────────────────────── */}
+      <aside style={S.rightPanel}>
+        <div style={S.rightPanelHeader}>
+          <Settings2 size={13} color="var(--color-brand)" />
+          <span style={S.rightPanelTitle}>Configuración</span>
           {selectedNode && (
-            <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-[#21262d] text-[#8b949e] border border-[#30363d]">
-              {selectedNode.id}
-            </span>
+            <span style={S.nodeIdBadge}>{selectedNode.id}</span>
           )}
         </div>
-        <div className="flex-1 overflow-hidden">
-          <NodeConfigPanel
-            node={selectedNode}
-            onUpdateNode={onUpdateNode}
-          />
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          <NodeConfigPanel node={selectedNode} onUpdateNode={onUpdateNode} />
         </div>
       </aside>
     </div>
   )
 }
 
-// ------------------------------------------------------------------
-// Helpers
-// ------------------------------------------------------------------
-function ToolButton({ onClick, icon, title, active = false, danger = false }) {
+// ── Style objects (stable references) ─────────────────────────────
+const styles = {
+  root: {
+    display: 'flex',
+    height: '100dvh',
+    width: '100vw',
+    overflow: 'hidden',
+    background: 'var(--color-canvas)',
+    fontFamily: "'Inter', system-ui, sans-serif",
+  },
+
+  // Left toolbar
+  leftBar: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    width: 56,
+    background: 'var(--color-surface)',
+    borderRight: '1px solid var(--color-border-subtle)',
+    padding: '12px 0',
+    flexShrink: 0,
+    zIndex: 10,
+    gap: 4,
+  },
+  logo: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    background: 'var(--color-brand)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+    flexShrink: 0,
+  },
+  sep: {
+    width: 28,
+    height: 1,
+    background: 'var(--color-border-subtle)',
+    margin: '4px 0',
+  },
+  counter: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 1,
+  },
+  counterNum: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: 'var(--color-text-secondary)',
+    fontVariantNumeric: 'tabular-nums',
+    lineHeight: 1,
+  },
+  counterLabel: {
+    fontSize: 9,
+    fontWeight: 500,
+    letterSpacing: '0.07em',
+    textTransform: 'uppercase',
+    color: 'var(--color-text-muted)',
+  },
+
+  // Header
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 44,
+    padding: '0 16px',
+    borderBottom: '1px solid var(--color-border-subtle)',
+    background: 'var(--color-surface)',
+    flexShrink: 0,
+    zIndex: 10,
+  },
+  brandName: {
+    fontSize: 13,
+    fontWeight: 700,
+    letterSpacing: '-0.01em',
+    color: 'var(--color-text-primary)',
+  },
+  editorBadge: {
+    fontSize: 10,
+    fontWeight: 500,
+    letterSpacing: '0.04em',
+    padding: '2px 7px',
+    borderRadius: 4,
+    border: '1px solid var(--color-border)',
+    color: 'var(--color-text-tertiary)',
+  },
+
+  // Main
+  main: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    minWidth: 0,
+    background: 'var(--color-canvas)',
+  },
+
+  // Empty state
+  emptyState: {
+    position: 'absolute',
+    inset: 0,
+    pointerEvents: 'none',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  emptyIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    background: 'var(--color-raised)',
+    border: '1px solid var(--color-border)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  emptyTitle: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: 'var(--color-text-secondary)',
+  },
+  emptyHint: {
+    fontSize: 12,
+    color: 'var(--color-text-muted)',
+  },
+
+  // Right panel
+  rightPanel: {
+    display: 'flex',
+    flexDirection: 'column',
+    width: 264,
+    background: 'var(--color-surface)',
+    borderLeft: '1px solid var(--color-border-subtle)',
+    flexShrink: 0,
+    zIndex: 10,
+  },
+  rightPanelHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 7,
+    padding: '10px 14px',
+    borderBottom: '1px solid var(--color-border-subtle)',
+    flexShrink: 0,
+  },
+  rightPanelTitle: {
+    fontSize: 11,
+    fontWeight: 600,
+    color: 'var(--color-text-secondary)',
+    letterSpacing: '0.02em',
+    flex: 1,
+  },
+  nodeIdBadge: {
+    fontSize: 9,
+    fontVariantNumeric: 'tabular-nums',
+    padding: '2px 6px',
+    borderRadius: 4,
+    background: 'var(--color-raised)',
+    border: '1px solid var(--color-border)',
+    color: 'var(--color-text-muted)',
+  },
+}
+
+// ── Sub-components ────────────────────────────────────────────────
+
+function ToolBtn({ onClick, title, children, danger = false }) {
+  const [hovered, setHovered] = useState(false)
   return (
     <button
       onClick={onClick}
       title={title}
-      className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all ${danger
-          ? 'text-red-400 hover:bg-red-500/15 hover:text-red-300'
-          : active
-            ? 'bg-[#6e40c9]/20 text-[#a78bfa]'
-            : 'text-[#8b949e] hover:bg-[#21262d] hover:text-[#e6edf3]'
-        }`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        width: 34, height: 34,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        borderRadius: 7, border: 'none', cursor: 'pointer',
+        color: danger
+          ? (hovered ? 'var(--color-danger)' : 'var(--color-text-muted)')
+          : (hovered ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)'),
+        background: hovered
+          ? (danger ? 'rgba(192,64,64,0.1)' : 'var(--color-raised)')
+          : 'transparent',
+        transition: 'all 150ms ease-out',
+      }}
     >
-      {icon}
+      {children}
     </button>
   )
 }
 
-function Divider() {
-  return <div className="w-8 h-px bg-[#30363d] my-1" />
+function GhostBtn({ onClick, children, disabled }) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      onMouseEnter={() => !disabled && setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex', alignItems: 'center',
+        padding: '5px 11px', borderRadius: 6,
+        border: `1px solid ${hovered ? 'var(--color-border-strong)' : 'var(--color-border)'}`,
+        background: hovered ? 'var(--color-raised)' : 'transparent',
+        color: disabled ? 'var(--color-text-muted)' : 'var(--color-text-secondary)',
+        fontSize: 11, fontWeight: 500, cursor: disabled ? 'default' : 'pointer',
+        transition: 'all 150ms ease-out',
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
+function PrimaryBtn({ onClick, children, disabled }) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      onMouseEnter={() => !disabled && setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex', alignItems: 'center',
+        padding: '5px 14px', borderRadius: 6, border: 'none',
+        background: disabled
+          ? 'var(--color-raised)'
+          : (hovered ? 'var(--color-brand-hover)' : 'var(--color-brand)'),
+        boxShadow: (!disabled && hovered) ? '0 0 16px var(--color-brand-glow)' : 'none',
+        color: disabled ? 'var(--color-text-muted)' : '#fff',
+        fontSize: 11, fontWeight: 600, cursor: disabled ? 'default' : 'pointer',
+        transition: 'all 150ms ease-out',
+        letterSpacing: '0.01em',
+      }}
+    >
+      {children}
+    </button>
+  )
 }

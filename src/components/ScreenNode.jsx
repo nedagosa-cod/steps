@@ -1,100 +1,148 @@
-import React, { memo, useRef } from 'react'
+import React, { memo } from 'react'
 import { Handle, Position } from 'reactflow'
-import { Monitor, ImageOff } from 'lucide-react'
+import { ImageOff, MonitorPlay } from 'lucide-react'
+import { normalizeTriggers, TRIGGER_COLORS, TRIGGER_LABELS } from '../utils/triggers'
 
 const ScreenNode = memo(({ data, selected }) => {
-    const { label, image, hotspot } = data
+    const { label, image } = data
+    const triggers = normalizeTriggers(data)
 
     return (
         <div
-            className={`screen-node relative rounded-xl overflow-hidden transition-all duration-200 cursor-pointer
-        ${selected
-                    ? 'ring-2 ring-purple-500 shadow-[0_0_24px_rgba(110,64,201,0.5)]'
-                    : 'ring-1 ring-[#30363d] shadow-[0_4px_24px_rgba(0,0,0,0.4)]'
-                }
-      `}
-            style={{ width: 280, background: '#161b22' }}
+            style={{
+                width: 272,
+                background: 'var(--color-raised)',
+                borderRadius: 10,
+                border: selected
+                    ? '1px solid var(--color-border-stronger)'
+                    : '1px solid var(--color-border)',
+                boxShadow: selected
+                    ? '0 0 0 3px var(--color-brand-dim), 0 8px 32px rgba(0,0,0,0.5)'
+                    : '0 2px 16px rgba(0,0,0,0.35)',
+                overflow: 'hidden',
+                transition: 'border 150ms ease-out, box-shadow 150ms ease-out',
+            }}
         >
-            {/* Header bar */}
-            <div className="flex items-center gap-2 px-3 py-2 border-b border-[#30363d] bg-[#0d1117]">
-                <div className="flex gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-green-500/70" />
+            {/* ── Window chrome ── */}
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '7px 10px',
+                background: 'var(--color-surface)',
+                borderBottom: '1px solid var(--color-border-subtle)',
+            }}>
+                <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
+                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#c04040', opacity: 0.8 }} />
+                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#c47b1a', opacity: 0.8 }} />
+                    <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#2ea567', opacity: 0.8 }} />
                 </div>
-                <Monitor size={12} className="text-[#6e40c9] ml-1" />
-                <span className="text-[11px] font-medium text-[#8b949e] truncate flex-1">
-                    {label || 'Pantalla sin nombre'}
+                <MonitorPlay size={11} style={{ color: 'var(--color-brand)', flexShrink: 0, opacity: 0.7 }} />
+                <span style={{
+                    fontSize: 11, fontWeight: 500, color: 'var(--color-text-secondary)',
+                    flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    letterSpacing: '0.01em',
+                }}>
+                    {label || 'Sin nombre'}
                 </span>
+                {/* Trigger count badge */}
+                {triggers.length > 0 && (
+                    <span style={{
+                        fontSize: 9, fontWeight: 700, color: 'var(--color-text-muted)',
+                        background: 'var(--color-canvas)', border: '1px solid var(--color-border)',
+                        borderRadius: 4, padding: '1px 5px', flexShrink: 0, fontVariantNumeric: 'tabular-nums',
+                    }}>
+                        {triggers.length}
+                    </span>
+                )}
             </div>
 
-            {/* Image area */}
-            <div className="relative" style={{ height: 180 }}>
+            {/* ── Image area with trigger overlays ── */}
+            <div style={{ position: 'relative', height: 176, background: 'var(--color-canvas)' }}>
+                {/* Background: image or placeholder */}
                 {image ? (
                     <img
-                        src={image}
-                        alt="Screen"
-                        className="w-full h-full object-cover"
-                        draggable={false}
+                        src={image} alt="Screen" draggable={false}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                     />
                 ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center bg-[#0d1117] gap-2">
-                        <ImageOff size={28} className="text-[#484f58]" />
-                        <span className="text-[11px] text-[#484f58]">Sin imagen</span>
+                    <div style={{
+                        width: '100%', height: '100%',
+                        display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', justifyContent: 'center', gap: 8,
+                        pointerEvents: 'none',
+                    }}>
+                        <ImageOff size={22} style={{ color: 'var(--color-text-muted)' }} />
+                        <span style={{ fontSize: 11, color: 'var(--color-text-muted)', letterSpacing: '0.02em' }}>
+                            Sin imagen
+                        </span>
                     </div>
                 )}
-
-                {/* Hotspot overlay (editor hint) */}
-                {hotspot && image && (
-                    <div
-                        className="absolute border-2 border-dashed border-violet-400/70 bg-violet-500/10 rounded"
-                        style={{
-                            left: `${hotspot.x}%`,
-                            top: `${hotspot.y}%`,
-                            width: `${hotspot.w}%`,
-                            height: `${hotspot.h}%`,
-                            pointerEvents: 'none',
-                        }}
-                    />
-                )}
+                {/* Trigger overlays — always rendered on top, regardless of image */}
+                {triggers.map((t, i) => {
+                    const hs = t.hotspot || { x: 40, y: 40, w: 20, h: 10 }
+                    const colors = TRIGGER_COLORS[t.type] || TRIGGER_COLORS.click
+                    return (
+                        <div
+                            key={t.id}
+                            style={{
+                                position: 'absolute',
+                                left: `${hs.x}%`, top: `${hs.y}%`,
+                                width: `${hs.w}%`, height: `${hs.h}%`,
+                                border: `1.5px dashed ${colors.border}`,
+                                background: colors.bg,
+                                borderRadius: 3,
+                                pointerEvents: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}
+                        >
+                            <span style={{
+                                fontSize: 8, fontWeight: 700, color: colors.label,
+                                background: 'rgba(10,13,18,0.7)',
+                                borderRadius: 3, padding: '1px 4px', lineHeight: 1.2,
+                            }}>
+                                {i + 1}
+                            </span>
+                        </div>
+                    )
+                })}
             </div>
 
-            {/* Footer */}
-            <div className="px-3 py-2 flex items-center justify-between border-t border-[#30363d]">
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${data.triggerType === 'input'
-                        ? 'bg-blue-500/15 text-blue-400'
-                        : 'bg-violet-500/15 text-violet-400'
-                    }`}>
-                    {data.triggerType === 'input' ? '⌨ Input' : '🖱 Click'}
-                </span>
-                <span className="text-[10px] text-[#484f58]">Screen Node</span>
-            </div>
+            {/* ── Trigger pills ── */}
+            {triggers.length > 0 && (
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    padding: '5px 10px',
+                    borderTop: '1px solid var(--color-border-subtle)',
+                    background: 'var(--color-surface)',
+                    flexWrap: 'wrap',
+                }}>
+                    {triggers.map((t, i) => {
+                        const colors = TRIGGER_COLORS[t.type] || TRIGGER_COLORS.click
+                        return (
+                            <React.Fragment key={t.id}>
+                                {i > 0 && (
+                                    <span style={{ fontSize: 9, color: 'var(--color-text-muted)', flexShrink: 0 }}>→</span>
+                                )}
+                                <span style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 3,
+                                    fontSize: 9, fontWeight: 600, letterSpacing: '0.05em',
+                                    color: colors.label,
+                                    background: colors.bg,
+                                    border: `1px solid ${colors.border}`,
+                                    borderRadius: 4, padding: '2px 5px', flexShrink: 0,
+                                }}>
+                                    {i + 1} · {TRIGGER_LABELS[t.type]}
+                                </span>
+                            </React.Fragment>
+                        )
+                    })}
+                </div>
+            )}
 
-            {/* Handles */}
-            <Handle
-                type="target"
-                position={Position.Left}
-                style={{
-                    width: 12,
-                    height: 12,
-                    background: '#6e40c9',
-                    border: '2px solid #8b5cf6',
-                    borderRadius: '50%',
-                    left: -6
-                }}
-            />
-            <Handle
-                type="source"
-                position={Position.Right}
-                style={{
-                    width: 12,
-                    height: 12,
-                    background: '#6e40c9',
-                    border: '2px solid #8b5cf6',
-                    borderRadius: '50%',
-                    right: -6
-                }}
-            />
+            {/* ── Handles ── */}
+            <Handle type="target" position={Position.Left} style={{ width: 10, height: 10, background: 'var(--color-canvas)', border: '2px solid var(--color-brand)', borderRadius: '50%', left: -5 }} />
+            <Handle type="source" position={Position.Right} style={{ width: 10, height: 10, background: 'var(--color-canvas)', border: '2px solid var(--color-brand)', borderRadius: '50%', right: -5 }} />
         </div>
     )
 })

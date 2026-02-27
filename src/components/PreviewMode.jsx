@@ -1,159 +1,365 @@
-import React, { useState, useCallback, useRef } from 'react'
-import { X, MousePointer, Keyboard, ChevronRight, AlertCircle } from 'lucide-react'
+import React, { useState, useCallback, useRef, useEffect } from 'react'
+import { X, CheckCircle, AlertCircle } from 'lucide-react'
+import { normalizeTriggers, TRIGGER_COLORS } from '../utils/triggers'
+
+/* ── Overlay renderer — parallel model: all triggers completable in any order ── */
+function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs) {
+    return triggers.map((trigger, idx) => {
+        const hs = trigger.hotspot || { x: 30, y: 40, w: 20, h: 10 }
+        const colors = TRIGGER_COLORS[trigger.type] || TRIGGER_COLORS.click
+        const isDone = completedTriggers.has(trigger.id)
+        const isBlocked = trigger.dependsOn && !completedTriggers.has(trigger.dependsOn)
+
+        if (trigger.type === 'click') {
+            return (
+                <button
+                    key={trigger.id}
+                    onClick={() => !isDone && !isBlocked && handleClickTrigger(trigger)}
+                    disabled={isBlocked}
+                    style={{
+                        position: 'absolute',
+                        left: `${hs.x}%`, top: `${hs.y}%`,
+                        width: `${hs.w}%`, height: `${hs.h}%`,
+                        borderRadius: 4,
+                        border: isDone
+                            ? '1.5px solid rgba(46,165,103,0.5)'
+                            : `1.5px solid ${colors.borderActive}`,
+                        background: isDone ? 'rgba(46,165,103,0.12)' : colors.bgActive,
+                        cursor: isDone || isBlocked ? 'default' : 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'all 200ms ease-out',
+                        opacity: isBlocked ? 0.35 : 1,
+                        pointerEvents: isBlocked ? 'none' : 'auto',
+                    }}
+                    onMouseEnter={e => {
+                        if (!isDone && !isBlocked) {
+                            e.currentTarget.style.background = colors.bgActive
+                            e.currentTarget.style.borderColor = colors.borderActive
+                        }
+                    }}
+                    onMouseLeave={e => {
+                        if (!isDone && !isBlocked) e.currentTarget.style.background = colors.bgActive
+                    }}
+                >
+                    {isDone && <span style={{ fontSize: 14, color: '#5ac98a' }}>✓</span>}
+                </button>
+            )
+        }
+
+        if (trigger.type === 'input') {
+            return (
+                <div
+                    key={trigger.id}
+                    style={{
+                        position: 'absolute',
+                        left: `${hs.x}%`, top: `${hs.y}%`,
+                        width: `${hs.w}%`, height: `${hs.h}%`,
+                        borderRadius: 4,
+                        border: isDone
+                            ? '1.5px solid rgba(46,165,103,0.6)'
+                            : `1.5px solid ${colors.borderActive}`,
+                        overflow: 'hidden',
+                        display: 'flex', alignItems: 'center',
+                        transition: 'all 200ms ease-out',
+                        opacity: isBlocked ? 0.35 : 1,
+                        pointerEvents: isBlocked ? 'none' : 'auto',
+                    }}
+                >
+                    {isDone ? (
+                        <div style={{ width: '100%', height: '100%', background: 'rgba(46,165,103,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ fontSize: 14, color: '#5ac98a' }}>✓</span>
+                        </div>
+                    ) : (
+                        <input
+                            ref={el => inputRefs.current[trigger.id] = el}
+                            type="text"
+                            value={inputValues[trigger.id] || ''}
+                            onChange={e => {
+                                const val = e.target.value
+                                setInputValues(prev => ({ ...prev, [trigger.id]: val }))
+                                if (!isBlocked) handleInputChange(trigger, val)
+                            }}
+                            onKeyDown={e => { if (e.key === 'Enter' && !isBlocked) handleInputSubmit(trigger) }}
+                            placeholder={trigger.validationValue ? `"${trigger.validationValue}"` : '…'}
+                            disabled={isBlocked}
+                            style={{
+                                width: '100%', height: '100%',
+                                background: 'rgba(10,13,18,0.75)',
+                                border: 'none', outline: 'none',
+                                color: '#e2eaf4',
+                                fontSize: 'clamp(11px, 1.3vw, 18px)',
+                                padding: '0 6px',
+                                fontFamily: 'inherit',
+                                caretColor: colors.label,
+                            }}
+                        />
+                    )}
+                </div>
+            )
+        }
+
+        return null
+    })
+}
 
 export default function PreviewMode({ nodes, edges, onExit }) {
     const startNode = nodes.find(n => !edges.some(e => e.target === n.id)) || nodes[0]
     const [currentNodeId, setCurrentNodeId] = useState(startNode?.id)
-    const [inputValue, setInputValue] = useState('')
+    // Parallel model: Set of completed trigger IDs (any order)
+    const [completedTriggers, setCompletedTriggers] = useState(new Set())
+    const [inputValues, setInputValues] = useState({}) // keyed by trigger.id
     const [error, setError] = useState('')
-    const [isTransitioning, setIsTransitioning] = useState(false)
-    const inputRef = useRef(null)
+    const [success, setSuccess] = useState(false)
+    const [transitioning, setTransitioning] = useState(false)
+
+    const imgWrapperRef = useRef(null)
+    const inputRefs = useRef({})
 
     const currentNode = nodes.find(n => n.id === currentNodeId)
 
+    // Compute linear node order following edges
+    const nodeOrder = (() => {
+        const order = []
+        let cursor = nodes.find(n => !edges.some(e => e.target === n.id))?.id
+        const visited = new Set()
+        while (cursor && !visited.has(cursor)) {
+            order.push(cursor)
+            visited.add(cursor)
+            cursor = edges.find(e => e.source === cursor)?.target
+        }
+        return order
+    })()
+
+    const stepIndex = nodeOrder.indexOf(currentNodeId)
+    const totalSteps = nodeOrder.length
+
+    const getNextNodeId = useCallback(() =>
+        edges.find(e => e.source === currentNodeId)?.target
+        , [currentNodeId, edges])
+
     const navigate = useCallback((targetId) => {
-        setIsTransitioning(true)
+        setTransitioning(true)
         setError('')
-        setInputValue('')
+        setSuccess(false)
+        setInputValues({})
+        setCompletedTriggers(new Set())
         setTimeout(() => {
             setCurrentNodeId(targetId)
-            setIsTransitioning(false)
-            setTimeout(() => inputRef.current?.focus(), 100)
-        }, 350)
+            setTransitioning(false)
+        }, 280)
     }, [])
 
-    const getNextNodeId = useCallback(() => {
-        const edge = edges.find(e => e.source === currentNodeId)
-        return edge?.target
-    }, [currentNodeId, edges])
-
-    const handleHotspotClick = () => {
-        const nextId = getNextNodeId()
-        if (nextId) navigate(nextId)
-        else setError('Este es el último paso del simulador.')
-    }
-
-    const handleInputSubmit = () => {
-        const { data } = currentNode
-        if (!data.validationValue || inputValue.trim() === data.validationValue.trim()) {
-            const nextId = getNextNodeId()
-            if (nextId) navigate(nextId)
-            else setError('¡Simulación completada! 🎉')
-        } else {
-            setError('Texto incorrecto. Intenta de nuevo.')
-            setTimeout(() => setError(''), 2000)
-        }
-    }
+    // Called after each trigger completes — check if ALL are done
+    const onTriggerComplete = useCallback((triggerId, allTriggers) => {
+        setCompletedTriggers(prev => {
+            const next = new Set(prev)
+            next.add(triggerId)
+            // Check if every trigger in this node is now done
+            const allDone = allTriggers.every(t => next.has(t.id))
+            if (allDone) {
+                const nextId = getNextNodeId()
+                if (nextId) {
+                    // Navigate with a slight delay so the ✓ is visible
+                    setTimeout(() => navigate(nextId), 350)
+                } else {
+                    setSuccess(true)
+                }
+            }
+            return next
+        })
+    }, [getNextNodeId, navigate])
 
     if (!currentNode) {
         return (
-            <div className="fixed inset-0 bg-[#0d1117] z-50 flex items-center justify-center">
-                <p className="text-[#8b949e]">No hay nodos en el simulador.</p>
+            <div style={{ position: 'fixed', inset: 0, background: 'var(--color-canvas)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <p style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>No hay nodos.</p>
             </div>
         )
     }
 
     const { data } = currentNode
-    const hotspot = data.hotspot || { x: 40, y: 40, w: 20, h: 20 }
+    const triggers = normalizeTriggers(data)
+
+    const handleClickTrigger = (trigger) => {
+        if (completedTriggers.has(trigger.id)) return
+        onTriggerComplete(trigger.id, triggers)
+    }
+
+    const handleInputChange = (trigger, newValue) => {
+        if (completedTriggers.has(trigger.id)) return
+        const inputVal = (newValue || '').trim()
+        const expected = (trigger.validationValue || '').trim()
+        // Auto-complete as you type if there is a required expected value
+        if (expected && inputVal === expected) {
+            setError('')
+            onTriggerComplete(trigger.id, triggers)
+        }
+    }
+
+    const handleInputSubmit = (trigger) => {
+        if (completedTriggers.has(trigger.id)) return
+        const inputVal = (inputValues[trigger.id] || '').trim()
+        const expected = (trigger.validationValue || '').trim()
+        if (!expected || inputVal === expected) {
+            setError('')
+            onTriggerComplete(trigger.id, triggers)
+        } else {
+            setError('Texto incorrecto. Intenta de nuevo.')
+            setTimeout(() => setError(''), 2200)
+        }
+    }
 
     return (
-        <div className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center">
-            {/* Top bar */}
-            <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-4 z-10">
-                <div className="flex items-center gap-3">
-                    <span className="text-xs font-semibold uppercase tracking-widest text-[#6e40c9]">Preview</span>
-                    <span className="text-sm text-[#8b949e]">—</span>
-                    <span className="text-sm text-[#e6edf3]">{data.label || 'Pantalla'}</span>
+        <div style={{
+            position: 'fixed', inset: 0, zIndex: 50,
+            background: 'rgba(10,13,18,0.97)',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+        }}>
+            {/* ── Top bar ── */}
+            <div style={{
+                position: 'absolute', top: 0, left: 0, right: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '12px 24px',
+                borderBottom: '1px solid var(--color-border-subtle)',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-brand)' }}>
+                        Preview
+                    </span>
+                    <span style={{ color: 'var(--color-border)', fontSize: 12 }}>·</span>
+                    <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                        {data.label || 'Sin nombre'}
+                    </span>
                 </div>
-                <div className="flex items-center gap-4">
-                    {/* Steps indicator */}
-                    <div className="flex gap-1.5">
-                        {nodes.map(n => (
-                            <div
-                                key={n.id}
-                                className={`h-1.5 rounded-full transition-all duration-300 ${n.id === currentNodeId ? 'w-6 bg-[#6e40c9]' : 'w-1.5 bg-[#30363d]'
-                                    }`}
-                            />
-                        ))}
-                    </div>
-                    <button
-                        onClick={onExit}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-[#8b949e] bg-[#21262d] border border-[#30363d] hover:text-[#e6edf3] hover:border-[#484f58] transition-all"
-                    >
-                        <X size={13} />
-                        Salir
-                    </button>
+
+                {/* Screen step pills */}
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                    {nodeOrder.map((id, i) => (
+                        <div key={id} style={{
+                            height: 3, borderRadius: 99,
+                            width: id === currentNodeId ? 18 : 5,
+                            background: i <= stepIndex ? 'var(--color-brand)' : 'var(--color-border)',
+                            transition: 'width 250ms ease-out, background 250ms ease-out',
+                        }} />
+                    ))}
+                    <span style={{ fontSize: 10, color: 'var(--color-text-muted)', marginLeft: 6, fontVariantNumeric: 'tabular-nums' }}>
+                        {stepIndex + 1}/{totalSteps}
+                    </span>
                 </div>
+
+                <button
+                    onClick={onExit}
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        padding: '4px 10px', borderRadius: 6,
+                        border: '1px solid var(--color-border)', background: 'transparent',
+                        cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: 11, fontWeight: 500,
+                        transition: 'all 150ms ease-out',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-border-strong)'; e.currentTarget.style.color = 'var(--color-text-primary)' }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-secondary)' }}
+                >
+                    <X size={12} />
+                    Salir
+                </button>
             </div>
 
-            {/* Main preview */}
-            <div
-                className={`relative rounded-2xl overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.8)] transition-all duration-350 ${isTransitioning ? 'opacity-0 scale-95 blur-sm' : 'opacity-100 scale-100 blur-0'
-                    }`}
-                style={{ maxWidth: 900, width: '90vw', maxHeight: '75vh' }}
-            >
+            {/* ── Main image container ── */}
+            <div style={{
+                maxWidth: 920, width: '88vw',
+                borderRadius: 12, border: '1px solid var(--color-border)',
+                overflow: 'hidden',
+                boxShadow: '0 24px 80px rgba(0,0,0,0.7)',
+                transition: 'opacity 280ms ease-out, transform 280ms ease-out, filter 280ms ease-out',
+                opacity: transitioning ? 0 : 1,
+                transform: transitioning ? 'scale(0.98) translateY(6px)' : 'scale(1) translateY(0)',
+                filter: transitioning ? 'blur(3px)' : 'blur(0)',
+                position: 'relative',
+            }}>
                 {data.image ? (
-                    <div className="relative">
+                    <div ref={imgWrapperRef} style={{ position: 'relative', lineHeight: 0 }}>
                         <img
                             src={data.image}
-                            alt="simulator screen"
-                            className="w-full h-auto block"
+                            alt="screen"
                             draggable={false}
-                            style={{ maxHeight: '75vh', objectFit: 'contain' }}
+                            style={{ width: '100%', height: '60vh', objectFit: 'cover', display: 'block' }}
                         />
-
-                        {/* Hotspot click area */}
-                        {data.triggerType === 'click' && (
-                            <button
-                                onClick={handleHotspotClick}
-                                className="absolute group"
-                                style={{
-                                    left: `${hotspot.x}%`,
-                                    top: `${hotspot.y}%`,
-                                    width: `${hotspot.w}%`,
-                                    height: `${hotspot.h}%`,
-                                }}
-                            >
-                                <span className="absolute inset-0 rounded bg-violet-500/20 border-2 border-violet-400/50 group-hover:bg-violet-500/35 group-hover:border-violet-400 transition-all animate-pulse group-hover:animate-none" />
-                                <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <MousePointer size={18} className="text-violet-300 drop-shadow" />
-                                </span>
-                            </button>
-                        )}
+                        {renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
                     </div>
                 ) : (
-                    <div className="w-full flex items-center justify-center bg-[#161b22] rounded-2xl" style={{ height: 400 }}>
-                        <span className="text-[#484f58]">Sin imagen en este nodo</span>
+                    <div ref={imgWrapperRef} style={{ position: 'relative', height: '60vh', background: 'var(--color-canvas)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 13, color: 'var(--color-text-muted)', pointerEvents: 'none' }}>Sin imagen en este nodo</span>
+                        {renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
                     </div>
                 )}
             </div>
 
-            {/* Input trigger UI */}
-            {data.triggerType === 'input' && (
-                <div className={`mt-6 flex gap-2 transition-all duration-350 ${isTransitioning ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
-                    <input
-                        ref={inputRef}
-                        type="text"
-                        value={inputValue}
-                        onChange={(e) => { setInputValue(e.target.value); setError('') }}
-                        onKeyDown={(e) => e.key === 'Enter' && handleInputSubmit()}
-                        placeholder={data.validationValue ? `Escribe: "${data.validationValue}"` : 'Escribe tu respuesta…'}
-                        className="bg-[#21262d] border border-[#30363d] rounded-xl px-4 py-2.5 text-sm text-[#e6edf3] placeholder-[#484f58] focus:outline-none focus:border-[#6e40c9] w-72 transition-colors"
-                    />
-                    <button
-                        onClick={handleInputSubmit}
-                        className="px-4 py-2.5 bg-[#6e40c9] hover:bg-[#7c3aed] text-white rounded-xl text-sm font-medium flex items-center gap-2 transition-colors"
-                    >
-                        <ChevronRight size={16} />
-                    </button>
+            {/* ── Trigger progress dots (when > 1 trigger) ── */}
+            {triggers.length > 1 && (
+                <div style={{
+                    display: 'flex', gap: 5, marginTop: 14, alignItems: 'center',
+                    opacity: transitioning ? 0 : 1,
+                    transition: 'opacity 280ms ease-out',
+                }}>
+                    {triggers.map((t) => {
+                        const done = completedTriggers.has(t.id)
+                        const colors = TRIGGER_COLORS[t.type] || TRIGGER_COLORS.click
+                        return (
+                            <div key={t.id} style={{
+                                display: 'flex', alignItems: 'center', gap: 5,
+                                padding: '3px 9px', borderRadius: 20,
+                                border: `1px solid ${done ? 'rgba(46,165,103,0.35)' : colors.border}`,
+                                background: done ? 'rgba(46,165,103,0.08)' : colors.bg,
+                                transition: 'all 250ms ease-out',
+                            }}>
+                                <span style={{
+                                    fontSize: 8, fontWeight: 700,
+                                    color: done ? '#5ac98a' : colors.label,
+                                }}>
+                                    {done ? '✓' : '○'}
+                                </span>
+                                <span style={{
+                                    fontSize: 9, fontWeight: done ? 600 : 400,
+                                    letterSpacing: '0.06em', textTransform: 'uppercase',
+                                    color: done ? '#5ac98a' : colors.label,
+                                }}>
+                                    {t.type}
+                                </span>
+                            </div>
+                        )
+                    })}
+                    {/* Pending count */}
+                    {completedTriggers.size < triggers.length && (
+                        <span style={{ fontSize: 10, color: 'var(--color-text-muted)', marginLeft: 2 }}>
+                            {triggers.length - completedTriggers.size} restante{triggers.length - completedTriggers.size !== 1 ? 's' : ''}
+                        </span>
+                    )}
                 </div>
             )}
 
-            {/* Error / info message */}
+            {/* ── Feedback ── */}
             {error && (
-                <div className="mt-3 flex items-center gap-2 text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-xl">
-                    <AlertCircle size={14} />
+                <div style={{
+                    marginTop: 12, display: 'flex', alignItems: 'center', gap: 7,
+                    padding: '7px 14px', borderRadius: 7,
+                    border: '1px solid rgba(192,64,64,0.3)', background: 'rgba(192,64,64,0.1)',
+                    fontSize: 12, color: '#d97979',
+                }}>
+                    <AlertCircle size={13} />
                     {error}
+                </div>
+            )}
+
+            {success && (
+                <div style={{
+                    marginTop: 12, display: 'flex', alignItems: 'center', gap: 7,
+                    padding: '7px 18px', borderRadius: 7,
+                    border: '1px solid rgba(46,165,103,0.3)', background: 'rgba(46,165,103,0.1)',
+                    fontSize: 12, color: '#5ac98a',
+                }}>
+                    <CheckCircle size={13} />
+                    ¡Simulación completada!
                 </div>
             )}
         </div>

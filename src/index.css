@@ -1,45 +1,249 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────────────────
+   Intent: Authoring tool for software simulators
+   World: Film editing suites, audio mixing desks, storyboard tables
+   Feel: Dense precision — like a professional NLE editor, not a toy
+   Depth: Borders-only (dark, technical), with accent glow for state
+   Typography: Inter — mechanical, precise, neutral authority
+   Spacing: 4px base unit
+   ───────────────────────────────────────────────────────────── */
+
 @theme {
-  --color-bg-base: #0d1117;
-  --color-bg-surface: #161b22;
-  --color-bg-elevated: #21262d;
-  --color-border: #30363d;
-  --color-accent: #6e40c9;
-  --color-accent-hover: #8b5cf6;
-  --color-accent-glow: rgba(110, 64, 201, 0.35);
-  --color-text-primary: #e6edf3;
-  --color-text-secondary: #8b949e;
-  --color-text-muted: #484f58;
-  --color-green: #3fb950;
-  --color-handle: #6e40c9;
+  /* Surfaces — same hue, progressive lightness (barely perceptible shifts) */
+  --color-canvas: #0a0d12;
+  /* level 0: app canvas */
+  --color-surface: #0d1117;
+  /* level 1: panels, sidebars — one notch above canvas */
+  --color-raised: #111823;
+  /* level 2: cards, nodes */
+  --color-overlay: #161d27;
+  /* level 3: dropdowns, floating */
+  --color-control: #0d1117;
+  /* inputs — inset, darker feel */
+
+  /* Borders — rgba for whisper-quiet separation */
+  --color-border-subtle: rgba(255, 255, 255, 0.04);
+  /* softest divider */
+  --color-border: rgba(255, 255, 255, 0.08);
+  /* default boundaries */
+  --color-border-strong: rgba(255, 255, 255, 0.14);
+  /* emphasis, hover */
+  --color-border-stronger: rgba(255, 255, 255, 0.22);
+  /* focus rings, selected */
+
+  /* Text — 4 levels, not 2 */
+  --color-text-primary: #e2eaf4;
+  /* default content */
+  --color-text-secondary: #8d9eb5;
+  /* supporting, labels */
+  --color-text-tertiary: #566375;
+  /* metadata, counts */
+  --color-text-muted: #363f4d;
+  /* disabled, placeholder */
+
+  /* Brand — violet, single accent */
+  --color-brand: #7c5cfc;
+  --color-brand-hover: #8b6dfd;
+  --color-brand-dim: rgba(124, 92, 252, 0.12);
+  --color-brand-glow: rgba(124, 92, 252, 0.30);
+
+  /* Handles — connector dots */
+  --color-handle: #7c5cfc;
+
+  /* Semantic */
+  --color-success: #2ea567;
+  --color-warning: #c47b1a;
+  --color-danger: #c04040;
 }
 
-* {
+/* ── Reset ── */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-body {
-  background-color: var(--color-bg-base);
-  color: var(--color-text-primary);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+html,
+body,
+#root {
+  height: 100%;
   overflow: hidden;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: var(--color-bg-base); }
-::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
+body {
+  background: var(--color-canvas);
+  color: var(--color-text-primary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
 
-/* React Flow overrides */
-.react-flow__background { background-color: var(--color-bg-base); }
-.react-flow__edge-path { stroke: var(--color-accent); stroke-width: 2.5; }
-.react-flow__edge.selected .react-flow__edge-path { stroke: var(--color-accent-hover); }
-.react-flow__connection-path { stroke: var(--color-accent-hover); stroke-width: 2; }
-.react-flow__controls { background: var(--color-bg-elevated); border: 1px solid var(--color-border); border-radius: 10px; overflow: hidden; }
-.react-flow__controls-button { background: var(--color-bg-elevated); border-bottom: 1px solid var(--color-border); fill: var(--color-text-secondary); }
-.react-flow__controls-button:hover { background: var(--color-bg-surface); fill: var(--color-text-primary); }
-.react-flow__minimap { background: var(--color-bg-elevated) !important; border-radius: 10px; border: 1px solid var(--color-border); }
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* ── Transitions ── */
+.transition-fast {
+  transition: all 150ms ease-out;
+}
+
+.transition-medium {
+  transition: all 220ms ease-out;
+}
+
+/* ── Focus ring ── */
+:focus-visible {
+  outline: 1.5px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/* ── React Flow overrides ── */
+.react-flow__background {
+  background: var(--color-canvas);
+}
+
+/* Edges */
+.react-flow__edge-path {
+  stroke: var(--color-brand);
+  stroke-width: 1.5;
+  opacity: 0.6;
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: var(--color-brand-hover);
+  opacity: 1;
+}
+
+/* Connection line while dragging */
+.react-flow__connection-path {
+  stroke: var(--color-brand);
+  stroke-width: 1.5;
+  opacity: 0.8;
+}
+
+/* Controls panel */
+.react-flow__controls {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.react-flow__controls-button {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border-subtle);
+  fill: var(--color-text-tertiary);
+  height: 26px;
+  width: 26px;
+  transition: background 150ms ease-out, fill 150ms ease-out;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: none;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--color-raised);
+  fill: var(--color-text-primary);
+}
+
+/* Minimap */
+.react-flow__minimap {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px;
+}
+
+.react-flow__minimap-mask {
+  fill: rgba(10, 13, 18, 0.75);
+}
+
+/* Edge label */
+.react-flow__edge-textbg {
+  fill: var(--color-raised);
+}
+
+/* ── Node selection ring (handled in node component) ── */
+.react-flow__node.selected {
+  outline: none;
+}
+
+/* ── Animation utilities ── */
+@keyframes pulse-ring {
+  0% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.3;
+    transform: scale(1.08);
+  }
+
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 220ms ease-out forwards;
+}
+
+/* ── Preview mode transition ── */
+.preview-enter {
+  opacity: 0;
+  transform: scale(0.97) translateY(4px);
+  filter: blur(2px);
+}
+
+.preview-active {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  filter: blur(0);
+  transition: opacity 250ms ease-out, transform 250ms ease-out, filter 250ms ease-out;
+}
+
+.preview-exit {
+  opacity: 0;
+  transform: scale(1.02);
+  filter: blur(2px);
+  transition: opacity 200ms ease-in, transform 200ms ease-in, filter 200ms ease-in;
+}
