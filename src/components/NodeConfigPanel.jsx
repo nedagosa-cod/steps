@@ -54,7 +54,7 @@ const NumericInput = ({ value, onChange, label, accentColor }) => (
         <FieldLabel>{label}</FieldLabel>
         <div style={{ position: 'relative' }}>
             <input
-                type="number" min={0} max={100}
+                type="number" min={0} max={100} step="0.01"
                 value={value}
                 onChange={onChange}
                 style={{

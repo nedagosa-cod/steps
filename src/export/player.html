@@ -61,29 +61,71 @@
             justify-content: center;
         }
 
-        /* ── Top bar ── */
-        .top-bar {
+        /* ── Floating HUD ── */
+        .hud-container {
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
+            left: 24px;
+            top: 24px;
+            z-index: 100;
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 24px;
-            border-bottom: 1px solid var(--color-border-subtle);
+            flex-direction: column;
+            gap: 8px;
+            min-width: 260px;
+            pointer-events: none;
         }
 
-        .top-bar-left,
-        .top-bar-center,
-        .top-bar-right {
+        .hud-card {
+            background: rgba(10, 13, 18, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--color-border);
+            border-radius: 12px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+            padding: 12px 16px;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .hud-drag-handle {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 16px;
+            cursor: grab;
+            color: var(--color-text-tertiary);
+            margin-bottom: 10px;
+            margin-top: -6px;
+            transition: color 150ms;
+        }
+
+        .hud-drag-handle:hover {
+            color: var(--color-text-secondary);
+        }
+
+        .hud-drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .hud-drag-handle svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .top-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .top-row-header {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .brand {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 700;
             letter-spacing: 0.1em;
             text-transform: uppercase;
@@ -91,27 +133,31 @@
         }
 
         .screen-name {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--color-text-secondary);
+            max-width: 140px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         /* Step indicator */
         .step-pills {
             display: flex;
-            gap: 4px;
+            gap: 3px;
             align-items: center;
         }
 
         .step-pill {
             height: 3px;
             border-radius: 99px;
-            width: 5px;
+            width: 4px;
             background: var(--color-border);
             transition: width 250ms, background 250ms;
         }
 
         .step-pill.active {
-            width: 18px;
+            width: 14px;
             background: var(--color-brand);
         }
 
@@ -120,9 +166,9 @@
         }
 
         .step-text {
-            font-size: 10px;
+            font-size: 9px;
             color: var(--color-text-muted);
-            margin-left: 6px;
+            margin-left: 4px;
             font-variant-numeric: tabular-nums;
         }
 
@@ -225,24 +271,27 @@
             opacity: 0.5;
         }
 
-        /* ── Progress row (bottom) ── */
-        .progress-row {
+        /* ── Progress row ── */
+        .hud-progress-row {
             display: flex;
-            gap: 5px;
-            margin-top: 14px;
+            gap: 4px;
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid var(--color-border-subtle);
             align-items: center;
+            flex-wrap: wrap;
             transition: opacity 280ms ease-out;
         }
 
-        .progress-row.transitioning {
+        .hud-progress-row.transitioning {
             opacity: 0;
         }
 
         .trigger-badge {
             display: flex;
             align-items: center;
-            gap: 5px;
-            padding: 3px 9px;
+            gap: 4px;
+            padding: 2px 7px;
             border-radius: 20px;
             border: 1px solid var(--color-border);
             transition: all 250ms ease-out;
@@ -260,7 +309,7 @@
         }
 
         .badge-label {
-            font-size: 9px;
+            font-size: 8px;
             font-weight: 400;
             letter-spacing: 0.06em;
             text-transform: uppercase;
@@ -273,27 +322,28 @@
         }
 
         .remaining-text {
-            font-size: 10px;
+            font-size: 9px;
             color: var(--color-text-muted);
             margin-left: 2px;
         }
 
         /* ── Feedback ── */
-        .feedback {
-            margin-top: 12px;
-            display: flex;
+        .hud-feedback {
+            margin-top: 10px;
+            display: none;
             align-items: center;
             gap: 7px;
-            padding: 7px 14px;
-            border-radius: 7px;
-            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
             transition: opacity 200ms ease-out;
             opacity: 0;
             pointer-events: none;
         }
 
-        .feedback.show {
+        .hud-feedback.show {
             opacity: 1;
+            display: flex;
         }
 
         .feedback-error {
@@ -306,7 +356,7 @@
             border: 1px solid rgba(46, 165, 103, 0.3);
             background: rgba(46, 165, 103, 0.1);
             color: #5ac98a;
-            padding: 7px 18px;
+            padding: 6px 14px;
         }
     </style>
 
@@ -317,16 +367,53 @@
 <body>
 
     <div id="app">
-        <div class="top-bar">
-            <div class="top-bar-left">
-                <span class="brand">Playback</span>
-                <span style="color:var(--color-border); font-size:12px;">·</span>
-                <span class="screen-name" id="ui-screen-name">Loading...</span>
+        <div class="hud-container" id="ui-hud">
+            <div class="hud-card">
+                <div class="hud-drag-handle" id="ui-drag-handle">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="9" cy="12" r="1" />
+                        <circle cx="9" cy="5" r="1" />
+                        <circle cx="9" cy="19" r="1" />
+                        <circle cx="15" cy="12" r="1" />
+                        <circle cx="15" cy="5" r="1" />
+                        <circle cx="15" cy="19" r="1" />
+                    </svg>
+                </div>
+
+                <div class="top-row">
+                    <div class="top-row-header">
+                        <span class="brand">Playback</span>
+                        <span style="color:var(--color-border); font-size:10px;">·</span>
+                        <span class="screen-name" id="ui-screen-name">Loading...</span>
+                    </div>
+                    <div class="step-pills" id="ui-step-indicator">
+                        <!-- Pills injected here -->
+                    </div>
+                </div>
+
+                <div class="hud-progress-row" id="ui-progress-row">
+                    <!-- Badges injected here -->
+                </div>
+
+                <div class="hud-feedback feedback-error" id="ui-error">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    &nbsp;Texto incorrecto.
+                </div>
+                <div class="hud-feedback feedback-success" id="ui-success">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 10 0 1-5.93-9.14" />
+                        <polyline points="22 4 12 14.01 9 11.01" />
+                    </svg>
+                    &nbsp;¡Completado!
+                </div>
             </div>
-            <div class="top-bar-center" id="ui-step-indicator">
-                <!-- Pills injected here -->
-            </div>
-            <div class="top-bar-right"></div>
         </div>
 
         <div class="main-container" id="ui-main-container">
@@ -334,13 +421,6 @@
                 <!-- Image and triggers injected here -->
             </div>
         </div>
-
-        <div class="progress-row" id="ui-progress-row">
-            <!-- Badges injected here -->
-        </div>
-
-        <div class="feedback feedback-error" id="ui-error">Texto incorrecto. Intenta de nuevo.</div>
-        <div class="feedback feedback-success" id="ui-success">¡Simulación completada!</div>
     </div>
 
     <script>
@@ -372,6 +452,39 @@
             let completedTriggers = new Set();
             let isTransitioning = false;
             let errorTimer = null;
+
+            // Drag logic
+            const hud = document.getElementById("ui-hud");
+            const dragHandle = document.getElementById("ui-drag-handle");
+            let isDragging = false;
+            let startX, startY, initialX, initialY;
+
+            dragHandle.addEventListener('pointerdown', (e) => {
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                const rect = hud.getBoundingClientRect();
+                initialX = rect.left;
+                initialY = rect.top;
+                dragHandle.style.cursor = 'grabbing';
+            });
+
+            window.addEventListener('pointermove', (e) => {
+                if (!isDragging) return;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                let newX = Math.max(0, Math.min(window.innerWidth - hud.offsetWidth, initialX + dx));
+                let newY = Math.max(0, Math.min(window.innerHeight - hud.offsetHeight, initialY + dy));
+                hud.style.left = newX + 'px';
+                hud.style.top = newY + 'px';
+            });
+
+            window.addEventListener('pointerup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    dragHandle.style.cursor = 'grab';
+                }
+            });
 
             // Utilities
             const getNode = id => nodes.find(n => n.id === id);

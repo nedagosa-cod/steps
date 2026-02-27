@@ -14,8 +14,9 @@ import 'reactflow/dist/style.css'
 import ScreenNode from './components/ScreenNode'
 import NodeConfigPanel from './components/NodeConfigPanel'
 import PreviewMode from './components/PreviewMode'
+import FocusMode from './components/FocusMode'
 
-import { GitBranch, Plus, Play, Settings2, Trash2, Layers, Download } from 'lucide-react'
+import { GitBranch, Plus, Play, Settings2, Trash2, Layers, Download, Maximize2 } from 'lucide-react'
 import { exportSimulator } from './utils/exporter'
 
 // Must be stable — defined outside component
@@ -37,6 +38,7 @@ export default function App() {
   const [selectedNode, setSelectedNode] = useState(null)
   const [isPreview, setIsPreview] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  const [isFocusMode, setIsFocusMode] = useState(false)
 
   const onConnect = useCallback(
     (params) => setEdges((eds) => addEdge({ ...params, ...edgeDefaults }, eds)),
@@ -76,6 +78,7 @@ export default function App() {
       eds.filter((e) => e.source !== selectedNode.id && e.target !== selectedNode.id)
     )
     setSelectedNode(null)
+    setIsFocusMode(false)
   }, [selectedNode, setNodes, setEdges])
 
   const onUpdateNode = useCallback((id, patch) => {
@@ -156,6 +159,13 @@ export default function App() {
               </span>
             )}
 
+            {selectedNode && !isFocusMode && (
+              <GhostBtn onClick={() => setIsFocusMode(true)}>
+                <Maximize2 size={12} style={{ marginRight: 5 }} />
+                Enfocar nodo
+              </GhostBtn>
+            )}
+
             <GhostBtn onClick={addScreenNode}>
               <Plus size={12} style={{ marginRight: 5 }} />
               Nueva pantalla
@@ -176,8 +186,12 @@ export default function App() {
           </div>
         </header>
 
-        {/* Canvas */}
+        {/* Canvas / Focus Area */}
         <div style={{ flex: 1, position: 'relative' }}>
+          {isFocusMode && selectedNode ? (
+            <FocusMode node={selectedNode} onUpdateNode={onUpdateNode} onExit={() => setIsFocusMode(false)} />
+          ) : null}
+
           <ReactFlow
             nodes={nodes}
             edges={edges}

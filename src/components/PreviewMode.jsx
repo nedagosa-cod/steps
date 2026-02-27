@@ -1,6 +1,76 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react'
-import { X, CheckCircle, AlertCircle } from 'lucide-react'
+import { X, CheckCircle, AlertCircle, GripHorizontal } from 'lucide-react'
 import { normalizeTriggers, TRIGGER_COLORS } from '../utils/triggers'
+
+function DraggableHUD({ children }) {
+    const [pos, setPos] = useState({ x: 24, y: 24 })
+    const isDragging = useRef(false)
+    const dragStart = useRef({ x: 0, y: 0 })
+    const initialPos = useRef({ x: 0, y: 0 })
+
+    const onPointerDown = (e) => {
+        isDragging.current = true
+        dragStart.current = { x: e.clientX, y: e.clientY }
+        initialPos.current = { ...pos }
+
+        const onPointerMove = (ev) => {
+            if (!isDragging.current) return
+            const dx = ev.clientX - dragStart.current.x
+            const dy = ev.clientY - dragStart.current.y
+
+            setPos({
+                x: Math.max(0, Math.min(window.innerWidth - 200, initialPos.current.x + dx)),
+                y: Math.max(0, Math.min(window.innerHeight - 50, initialPos.current.y + dy))
+            })
+        }
+
+        const onPointerUp = () => {
+            isDragging.current = false
+            window.removeEventListener('pointermove', onPointerMove)
+            window.removeEventListener('pointerup', onPointerUp)
+        }
+
+        window.addEventListener('pointermove', onPointerMove)
+        window.addEventListener('pointerup', onPointerUp)
+    }
+
+    return (
+        <div style={{
+            position: 'absolute',
+            left: pos.x, top: pos.y,
+            zIndex: 100,
+            display: 'flex', flexDirection: 'column', gap: 8,
+            minWidth: 260,
+            pointerEvents: 'none',
+        }}>
+            <div style={{
+                background: 'rgba(10,13,18,0.85)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 12,
+                boxShadow: '0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.02) inset',
+                padding: '12px 16px',
+                pointerEvents: 'auto',
+                display: 'flex', flexDirection: 'column',
+            }}>
+                <div
+                    onPointerDown={onPointerDown}
+                    style={{
+                        display: 'flex', justifyContent: 'center', alignItems: 'center',
+                        height: 16, cursor: 'grab', color: 'var(--color-text-tertiary)',
+                        marginBottom: 10, marginTop: -6,
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'var(--color-text-secondary)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-tertiary)'}
+                >
+                    <GripHorizontal size={14} />
+                </div>
+                {children}
+            </div>
+        </div>
+    )
+}
 
 /* ── Overlay renderer — parallel model: all triggers completable in any order ── */
 function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs) {
@@ -214,62 +284,122 @@ export default function PreviewMode({ nodes, edges, onExit }) {
             position: 'fixed', inset: 0, zIndex: 50,
             background: 'rgba(10,13,18,0.97)',
             display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
         }}>
-            {/* ── Top bar ── */}
-            <div style={{
-                position: 'absolute', top: 0, left: 0, right: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '12px 24px',
-                borderBottom: '1px solid var(--color-border-subtle)',
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-brand)' }}>
-                        Preview
-                    </span>
-                    <span style={{ color: 'var(--color-border)', fontSize: 12 }}>·</span>
-                    <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-                        {data.label || 'Sin nombre'}
-                    </span>
+            <DraggableHUD>
+                {/* ── Top bar ── */}
+                <div style={{
+                    display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16,
+                }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-brand)' }}>
+                                Preview
+                            </span>
+                            <span style={{ color: 'var(--color-border)', fontSize: 10 }}>·</span>
+                            <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', maxWidth: 140, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {data.label || 'Sin nombre'}
+                            </span>
+                        </div>
+                        {/* Screen step pills */}
+                        <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                            {nodeOrder.map((id, i) => (
+                                <div key={id} style={{
+                                    height: 3, borderRadius: 99,
+                                    width: id === currentNodeId ? 14 : 4,
+                                    background: i <= stepIndex ? 'var(--color-brand)' : 'var(--color-border)',
+                                    transition: 'width 250ms ease-out, background 250ms ease-out',
+                                }} />
+                            ))}
+                            <span style={{ fontSize: 9, color: 'var(--color-text-muted)', marginLeft: 4, fontVariantNumeric: 'tabular-nums' }}>
+                                {stepIndex + 1}/{totalSteps}
+                            </span>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={onExit}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: 4,
+                            padding: '4px 8px', borderRadius: 6,
+                            border: '1px solid var(--color-border)', background: 'transparent',
+                            cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: 10, fontWeight: 500,
+                            transition: 'all 150ms ease-out', flexShrink: 0
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-border-strong)'; e.currentTarget.style.color = 'var(--color-text-primary)' }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-secondary)' }}
+                    >
+                        <X size={12} />
+                        Salir
+                    </button>
                 </div>
 
-                {/* Screen step pills */}
-                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                    {nodeOrder.map((id, i) => (
-                        <div key={id} style={{
-                            height: 3, borderRadius: 99,
-                            width: id === currentNodeId ? 18 : 5,
-                            background: i <= stepIndex ? 'var(--color-brand)' : 'var(--color-border)',
-                            transition: 'width 250ms ease-out, background 250ms ease-out',
-                        }} />
-                    ))}
-                    <span style={{ fontSize: 10, color: 'var(--color-text-muted)', marginLeft: 6, fontVariantNumeric: 'tabular-nums' }}>
-                        {stepIndex + 1}/{totalSteps}
-                    </span>
-                </div>
+                {/* ── Trigger progress dots (when > 1 trigger) ── */}
+                {triggers.length > 1 && (
+                    <div style={{
+                        display: 'flex', gap: 4, marginTop: 12, alignItems: 'center', flexWrap: 'wrap',
+                        opacity: transitioning ? 0 : 1, transition: 'opacity 280ms ease-out',
+                        paddingTop: 10, borderTop: '1px solid var(--color-border-subtle)'
+                    }}>
+                        {triggers.map((t) => {
+                            const done = completedTriggers.has(t.id)
+                            const colors = TRIGGER_COLORS[t.type] || TRIGGER_COLORS.click
+                            return (
+                                <div key={t.id} style={{
+                                    display: 'flex', alignItems: 'center', gap: 4,
+                                    padding: '2px 7px', borderRadius: 20,
+                                    border: `1px solid ${done ? 'rgba(46,165,103,0.35)' : colors.border}`,
+                                    background: done ? 'rgba(46,165,103,0.08)' : colors.bg,
+                                    transition: 'all 250ms ease-out',
+                                }}>
+                                    <span style={{ fontSize: 8, fontWeight: 700, color: done ? '#5ac98a' : colors.label }}>
+                                        {done ? '✓' : '○'}
+                                    </span>
+                                    <span style={{ fontSize: 8, fontWeight: done ? 600 : 400, letterSpacing: '0.06em', textTransform: 'uppercase', color: done ? '#5ac98a' : colors.label }}>
+                                        {t.type}
+                                    </span>
+                                </div>
+                            )
+                        })}
+                        {/* Pending count */}
+                        {completedTriggers.size < triggers.length && (
+                            <span style={{ fontSize: 9, color: 'var(--color-text-muted)', marginLeft: 2 }}>
+                                {triggers.length - completedTriggers.size} res.
+                            </span>
+                        )}
+                    </div>
+                )}
 
-                <button
-                    onClick={onExit}
-                    style={{
-                        display: 'flex', alignItems: 'center', gap: 6,
-                        padding: '4px 10px', borderRadius: 6,
-                        border: '1px solid var(--color-border)', background: 'transparent',
-                        cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: 11, fontWeight: 500,
-                        transition: 'all 150ms ease-out',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-border-strong)'; e.currentTarget.style.color = 'var(--color-text-primary)' }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-secondary)' }}
-                >
-                    <X size={12} />
-                    Salir
-                </button>
-            </div>
+                {/* ── Feedback ── */}
+                {error && (
+                    <div style={{
+                        marginTop: 10, display: 'flex', alignItems: 'center', gap: 7,
+                        padding: '6px 12px', borderRadius: 6,
+                        border: '1px solid rgba(192,64,64,0.3)', background: 'rgba(192,64,64,0.1)',
+                        fontSize: 11, color: '#d97979',
+                    }}>
+                        <AlertCircle size={12} />
+                        {error}
+                    </div>
+                )}
+
+                {success && (
+                    <div style={{
+                        marginTop: 10, display: 'flex', alignItems: 'center', gap: 7,
+                        padding: '6px 14px', borderRadius: 6,
+                        border: '1px solid rgba(46,165,103,0.3)', background: 'rgba(46,165,103,0.1)',
+                        fontSize: 11, color: '#5ac98a',
+                    }}>
+                        <CheckCircle size={12} />
+                        ¡Completado!
+                    </div>
+                )}
+            </DraggableHUD>
 
             {/* ── Main image container ── */}
             <div style={{
                 position: 'fixed', inset: 0, zIndex: -1,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: '#000',
+                background: '#0a0d12',
                 transition: 'opacity 280ms ease-out, transform 280ms ease-out, filter 280ms ease-out',
                 opacity: transitioning ? 0 : 1,
                 transform: transitioning ? 'scale(0.98)' : 'scale(1)',
@@ -277,13 +407,7 @@ export default function PreviewMode({ nodes, edges, onExit }) {
             }}>
                 {data.image ? (
                     <div ref={imgWrapperRef} style={{ position: 'relative', maxWidth: '100%', maxHeight: '100dvh', display: 'inline-block' }}>
-                        <img
-                            src={data.image}
-                            alt="screen"
-                            draggable={false}
-                            style={{ maxWidth: '100%', maxHeight: '100dvh', display: 'block' }}
-                        />
-                        {/* Overlay trigger positions relative to the tight wrapper. */}
+                        <img src={data.image} alt="screen" draggable={false} style={{ maxWidth: '100%', maxHeight: '100dvh', display: 'block' }} />
                         {renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
                     </div>
                 ) : (
@@ -293,74 +417,6 @@ export default function PreviewMode({ nodes, edges, onExit }) {
                     </div>
                 )}
             </div>
-
-            {/* ── Trigger progress dots (when > 1 trigger) ── */}
-            {triggers.length > 1 && (
-                <div style={{
-                    display: 'flex', gap: 5, marginTop: 14, alignItems: 'center',
-                    opacity: transitioning ? 0 : 1,
-                    transition: 'opacity 280ms ease-out',
-                }}>
-                    {triggers.map((t) => {
-                        const done = completedTriggers.has(t.id)
-                        const colors = TRIGGER_COLORS[t.type] || TRIGGER_COLORS.click
-                        return (
-                            <div key={t.id} style={{
-                                display: 'flex', alignItems: 'center', gap: 5,
-                                padding: '3px 9px', borderRadius: 20,
-                                border: `1px solid ${done ? 'rgba(46,165,103,0.35)' : colors.border}`,
-                                background: done ? 'rgba(46,165,103,0.08)' : colors.bg,
-                                transition: 'all 250ms ease-out',
-                            }}>
-                                <span style={{
-                                    fontSize: 8, fontWeight: 700,
-                                    color: done ? '#5ac98a' : colors.label,
-                                }}>
-                                    {done ? '✓' : '○'}
-                                </span>
-                                <span style={{
-                                    fontSize: 9, fontWeight: done ? 600 : 400,
-                                    letterSpacing: '0.06em', textTransform: 'uppercase',
-                                    color: done ? '#5ac98a' : colors.label,
-                                }}>
-                                    {t.type}
-                                </span>
-                            </div>
-                        )
-                    })}
-                    {/* Pending count */}
-                    {completedTriggers.size < triggers.length && (
-                        <span style={{ fontSize: 10, color: 'var(--color-text-muted)', marginLeft: 2 }}>
-                            {triggers.length - completedTriggers.size} restante{triggers.length - completedTriggers.size !== 1 ? 's' : ''}
-                        </span>
-                    )}
-                </div>
-            )}
-
-            {/* ── Feedback ── */}
-            {error && (
-                <div style={{
-                    marginTop: 12, display: 'flex', alignItems: 'center', gap: 7,
-                    padding: '7px 14px', borderRadius: 7,
-                    border: '1px solid rgba(192,64,64,0.3)', background: 'rgba(192,64,64,0.1)',
-                    fontSize: 12, color: '#d97979',
-                }}>
-                    <AlertCircle size={13} />
-                    {error}
-                </div>
-            )}
-
-            {success && (
-                <div style={{
-                    marginTop: 12, display: 'flex', alignItems: 'center', gap: 7,
-                    padding: '7px 18px', borderRadius: 7,
-                    border: '1px solid rgba(46,165,103,0.3)', background: 'rgba(46,165,103,0.1)',
-                    fontSize: 12, color: '#5ac98a',
-                }}>
-                    <CheckCircle size={13} />
-                    ¡Simulación completada!
-                </div>
-            )}
         </div>
     )
 }
