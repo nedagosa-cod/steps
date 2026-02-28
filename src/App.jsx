@@ -18,6 +18,7 @@ import FocusMode from './components/FocusMode'
 
 import { GitBranch, Plus, Play, Settings2, Trash2, Layers, Download, Maximize2 } from 'lucide-react'
 import { exportSimulator } from './utils/exporter'
+import { TRIGGER_COLORS } from './utils/triggers'
 
 // Must be stable — defined outside component
 const nodeTypes = { screenNode: ScreenNode }
@@ -89,6 +90,37 @@ export default function App() {
       prev?.id === id ? { ...prev, data: { ...prev.data, ...patch } } : prev
     )
   }, [setNodes])
+
+  // Combine drawn edges with dynamic trigger edges
+  const combinedEdges = React.useMemo(() => {
+    const computedEdges = []
+    nodes.forEach(node => {
+      const triggers = node.data?.triggers || []
+      triggers.forEach(t => {
+        if (t.navigateTarget && nodes.some(n => n.id === t.navigateTarget)) {
+          const colors = TRIGGER_COLORS[t.type] || TRIGGER_COLORS.click
+          computedEdges.push({
+            id: `edge-${node.id}-${t.id}-${t.navigateTarget}`,
+            source: node.id,
+            sourceHandle: `trigger-${t.id}`,
+            target: t.navigateTarget,
+            type: 'smoothstep',
+            animated: true,
+            deletable: false,
+            selectable: false, // Prevent user interaction to avoid confusion
+            markerEnd: { type: MarkerType.ArrowClosed, color: colors.label },
+            style: {
+              stroke: colors.label,
+              strokeWidth: 2,
+              opacity: 0.85,
+              strokeDasharray: '4 4' // Dashed to differentiate from normal flow
+            },
+          })
+        }
+      })
+    })
+    return [...edges, ...computedEdges]
+  }, [nodes, edges])
 
   // ── Styles ──────────────────────────────────────────────────────
   const S = styles
@@ -194,7 +226,7 @@ export default function App() {
 
           <ReactFlow
             nodes={nodes}
-            edges={edges}
+            edges={combinedEdges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
@@ -244,7 +276,7 @@ export default function App() {
           )}
         </div>
         <div style={{ flex: 1, overflow: 'hidden' }}>
-          <NodeConfigPanel node={selectedNode} onUpdateNode={onUpdateNode} />
+          <NodeConfigPanel node={selectedNode} onUpdateNode={onUpdateNode} nodes={nodes} />
         </div>
       </aside>
     </div>

@@ -23,9 +23,13 @@
             --color-brand-hover: #8b6dfd;
             --color-trigger-click-bg: rgba(124, 92, 252, 0.28);
             --color-trigger-click-border: rgba(124, 92, 252, 0.9);
+            --color-trigger-double_click-bg: rgba(255, 152, 0, 0.28);
+            --color-trigger-double_click-border: rgba(255, 152, 0, 0.9);
             --color-trigger-input-bg: rgba(56, 139, 253, 0.25);
             --color-trigger-input-border: rgba(56, 139, 253, 0.9);
             --color-trigger-input-caret: #388bfd;
+            --color-trigger-keypress-bg: rgba(232, 62, 140, 0.28);
+            --color-trigger-keypress-border: rgba(232, 62, 140, 0.9);
             --color-success-bg: rgba(46, 165, 103, 0.12);
             --color-success-border: rgba(46, 165, 103, 0.5);
             --color-success-text: #5ac98a;
@@ -225,13 +229,27 @@
             cursor: pointer;
         }
 
+        .trigger-double_click {
+            background: var(--color-trigger-double_click-bg);
+            border: 1.5px solid var(--color-trigger-double_click-border);
+            cursor: pointer;
+        }
+
+        .trigger-keypress {
+            background: var(--color-trigger-keypress-bg);
+            border: 1.5px solid var(--color-trigger-keypress-border);
+            pointer-events: none;
+            /* Just visual */
+        }
+
         .trigger-input {
             background: transparent;
             border: 1.5px solid var(--color-trigger-input-border);
             overflow: hidden;
         }
 
-        .trigger-click:hover {
+        .trigger-click:hover,
+        .trigger-double_click:hover {
             opacity: 0.8;
         }
 
@@ -593,24 +611,35 @@
                     el.style.width = `${hs.w}%`;
                     el.style.height = `${hs.h}%`;
 
-                    if (t.type === 'click') {
+                    if (t.hidden) {
+                        el.style.background = 'transparent';
+                        el.style.border = 'none';
+                    }
+
+                    if (t.type === 'click' || t.type === 'double_click') {
                         if (isDone) {
-                            el.innerHTML = `<span class="trigger-check">✓</span>`;
+                            el.innerHTML = t.hidden ? '' : `<span class="trigger-check">✓</span>`;
                         } else {
-                            el.onclick = () => {
+                            const handler = () => {
                                 if (!isTransitioning && !isDone && !isBlocked) {
                                     handleTriggerComplete(t.id, triggers);
                                 }
                             };
+                            if (t.type === 'click') el.onclick = handler;
+                            else if (t.type === 'double_click') el.ondblclick = handler;
                         }
                     } else if (t.type === 'input') {
                         if (isDone) {
-                            el.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--color-success-bg);"><span class="trigger-check">✓</span></div>`;
+                            el.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:${t.hidden ? 'transparent' : 'var(--color-success-bg)'};">${t.hidden ? '' : '<span class="trigger-check">✓</span>'}</div>`;
                         } else {
                             let inp = document.createElement("input");
-                            inp.type = "text";
-                            inp.placeholder = t.validationValue ? `"${t.validationValue}"` : '…';
+                            inp.type = t.isPassword ? "password" : "text";
+                            inp.placeholder = t.isPassword ? "••••••" : "Escribe aquí...";
                             if (isBlocked) inp.disabled = true;
+                            if (t.hidden) {
+                                inp.style.background = 'transparent';
+                                inp.style.color = 'var(--color-text-primary)';
+                            }
 
                             inp.oninput = (e) => {
                                 const val = e.target.value.trim();
@@ -632,6 +661,12 @@
                                 }
                             };
                             el.appendChild(inp);
+                        }
+                    } else if (t.type === 'keypress') {
+                        if (isDone) {
+                            el.innerHTML = t.hidden ? '' : `<span class="trigger-check">✓</span>`;
+                        } else if (!t.hidden) {
+                            el.innerHTML = `<span style="font-size:clamp(10px, 1vw, 14px);font-weight:700;color:var(--color-trigger-keypress-border);background:rgba(10,13,18,0.5);padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:0.05em">${t.keyCode || '?'}</span>`;
                         }
                     }
                     elImageWrapper.appendChild(el);
@@ -659,6 +694,32 @@
 
             // Initial render
             render();
+
+            // Global Keydown Listener for Keypress Triggers
+            document.addEventListener('keydown', (e) => {
+                if (isTransitioning) return;
+                const node = getNode(currentNodeId);
+                if (!node) return;
+                const currentTriggers = normalizeTriggers(node.data);
+
+                currentTriggers.forEach(t => {
+                    if (t.type !== 'keypress') return;
+                    if (completedTriggers.has(t.id)) return;
+
+                    const isBlocked = t.dependsOn && !completedTriggers.has(t.dependsOn);
+                    if (isBlocked) return;
+
+                    const expectedKey = t.keyCode || '';
+                    const pressedKey = e.key === ' ' ? 'Space' : e.key;
+
+                    if (pressedKey.toLowerCase() === expectedKey.toLowerCase()) {
+                        if (['Space', 'Enter', 'ArrowUp', 'ArrowDown'].includes(pressedKey)) {
+                            e.preventDefault();
+                        }
+                        handleTriggerComplete(t.id, currentTriggers);
+                    }
+                });
+            });
         });
     </script>
 </body>

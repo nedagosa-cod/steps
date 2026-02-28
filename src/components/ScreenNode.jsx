@@ -1,11 +1,19 @@
-import React, { memo } from 'react'
-import { Handle, Position } from 'reactflow'
+import React, { memo, useEffect } from 'react'
+import { Handle, Position, useUpdateNodeInternals } from 'reactflow'
 import { ImageOff, MonitorPlay } from 'lucide-react'
 import { normalizeTriggers, TRIGGER_COLORS, TRIGGER_LABELS } from '../utils/triggers'
 
-const ScreenNode = memo(({ data, selected }) => {
+const ScreenNode = memo(({ id, data, selected }) => {
     const { label, image } = data
     const triggers = normalizeTriggers(data)
+    const updateNodeInternals = useUpdateNodeInternals()
+
+    const branchingTriggers = triggers.filter(t => t.navigateTarget)
+    const branchingStr = branchingTriggers.map(t => t.id).join(',')
+
+    useEffect(() => {
+        updateNodeInternals(id)
+    }, [id, branchingStr, updateNodeInternals])
 
     return (
         <div
@@ -140,9 +148,34 @@ const ScreenNode = memo(({ data, selected }) => {
                 </div>
             )}
 
-            {/* ── Handles ── */}
+            {/* ── Main Connectors ── */}
             <Handle type="target" position={Position.Left} style={{ width: 10, height: 10, background: 'var(--color-canvas)', border: '2px solid var(--color-brand)', borderRadius: '50%', left: -5 }} />
             <Handle type="source" position={Position.Right} style={{ width: 10, height: 10, background: 'var(--color-canvas)', border: '2px solid var(--color-brand)', borderRadius: '50%', right: -5 }} />
+
+            {/* ── Trigger Branching Connectors (Side of Node) ── */}
+            {branchingTriggers.map((t, i) => {
+                const colors = TRIGGER_COLORS[t.type] || TRIGGER_COLORS.click
+                // Offset vertically so they don't overlap the main source handle at 50%
+                const offset = 18 + (i * 12)
+
+                return (
+                    <Handle
+                        key={`handle-${t.id}`}
+                        type="source"
+                        position={Position.Right}
+                        id={`trigger-${t.id}`}
+                        style={{
+                            background: colors.label,
+                            width: 6, height: 6, minWidth: 6, minHeight: 6,
+                            border: 'none', right: -3,
+                            top: `calc(50% + ${offset}px)`,
+                            transform: 'translateY(-50%)',
+                            boxShadow: `0 0 0 2px var(--color-raised)`,
+                            zIndex: 10,
+                        }}
+                    />
+                )
+            })}
         </div>
     )
 })

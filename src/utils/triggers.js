@@ -11,10 +11,8 @@
  *   { id, type: 'click'|'input', hotspot: { x, y, w, h }, validationValue?: string }
  */
 
-let _counter = 1
-
 export function newTriggerId() {
-    return `trigger-${_counter++}`
+    return `trigger-${Math.random().toString(36).substring(2, 9)}`
 }
 
 export function normalizeTriggers(data) {
@@ -55,6 +53,13 @@ export const TRIGGER_COLORS = {
         bgActive: 'rgba(124,92,252,0.28)',
         label: '#7c5cfc',
     },
+    double_click: {
+        border: 'rgba(255,152,0,0.65)',
+        bg: 'rgba(255,152,0,0.10)',
+        borderActive: 'rgba(255,152,0,0.9)',
+        bgActive: 'rgba(255,152,0,0.28)',
+        label: '#ff9800',
+    },
     input: {
         border: 'rgba(56,139,253,0.65)',
         bg: 'rgba(56,139,253,0.10)',
@@ -62,6 +67,13 @@ export const TRIGGER_COLORS = {
         bgActive: 'rgba(56,139,253,0.25)',
         label: '#388bfd',
     },
+    keypress: {
+        border: 'rgba(232,62,140,0.65)',
+        bg: 'rgba(232,62,140,0.10)',
+        borderActive: 'rgba(232,62,140,0.9)',
+        bgActive: 'rgba(232,62,140,0.28)',
+        label: '#e83e8c',
+    },
 }
 
-export const TRIGGER_LABELS = { click: 'Click', input: 'Input' }
+export const TRIGGER_LABELS = { click: 'Click', double_click: 'Doble Clic', input: 'Input', keypress: 'Tecla' }

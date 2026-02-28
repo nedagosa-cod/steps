@@ -80,21 +80,25 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
         const isDone = completedTriggers.has(trigger.id)
         const isBlocked = trigger.dependsOn && !completedTriggers.has(trigger.dependsOn)
 
-        if (trigger.type === 'click') {
+        if (trigger.type === 'click' || trigger.type === 'double_click') {
+            const isClick = trigger.type === 'click'
+            const isDbl = trigger.type === 'double_click'
+
             return (
                 <button
                     key={trigger.id}
-                    onClick={() => !isDone && !isBlocked && handleClickTrigger(trigger)}
+                    onClick={() => { if (isClick && !isDone && !isBlocked) handleClickTrigger(trigger) }}
+                    onDoubleClick={() => { if (isDbl && !isDone && !isBlocked) handleClickTrigger(trigger) }}
                     disabled={isBlocked}
                     style={{
                         position: 'absolute',
                         left: `${hs.x}%`, top: `${hs.y}%`,
                         width: `${hs.w}%`, height: `${hs.h}%`,
                         borderRadius: 4,
-                        border: isDone
+                        border: trigger.hidden ? 'none' : (isDone
                             ? '1.5px solid rgba(46,165,103,0.5)'
-                            : `1.5px solid ${colors.borderActive}`,
-                        background: isDone ? 'rgba(46,165,103,0.12)' : colors.bgActive,
+                            : `1.5px solid ${colors.borderActive}`),
+                        background: trigger.hidden ? 'transparent' : (isDone ? 'rgba(46,165,103,0.12)' : colors.bgActive),
                         cursor: isDone || isBlocked ? 'default' : 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         transition: 'all 200ms ease-out',
@@ -102,16 +106,16 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
                         pointerEvents: isBlocked ? 'none' : 'auto',
                     }}
                     onMouseEnter={e => {
-                        if (!isDone && !isBlocked) {
+                        if (!isDone && !isBlocked && !trigger.hidden) {
                             e.currentTarget.style.background = colors.bgActive
                             e.currentTarget.style.borderColor = colors.borderActive
                         }
                     }}
                     onMouseLeave={e => {
-                        if (!isDone && !isBlocked) e.currentTarget.style.background = colors.bgActive
+                        if (!isDone && !isBlocked && !trigger.hidden) e.currentTarget.style.background = colors.bgActive
                     }}
                 >
-                    {isDone && <span style={{ fontSize: 14, color: '#5ac98a' }}>✓</span>}
+                    {isDone && !trigger.hidden && <span style={{ fontSize: 14, color: '#5ac98a' }}>✓</span>}
                 </button>
             )
         }
@@ -125,9 +129,9 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
                         left: `${hs.x}%`, top: `${hs.y}%`,
                         width: `${hs.w}%`, height: `${hs.h}%`,
                         borderRadius: 4,
-                        border: isDone
+                        border: trigger.hidden ? 'none' : (isDone
                             ? '1.5px solid rgba(46,165,103,0.6)'
-                            : `1.5px solid ${colors.borderActive}`,
+                            : `1.5px solid ${colors.borderActive}`),
                         overflow: 'hidden',
                         display: 'flex', alignItems: 'center',
                         transition: 'all 200ms ease-out',
@@ -136,13 +140,13 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
                     }}
                 >
                     {isDone ? (
-                        <div style={{ width: '100%', height: '100%', background: 'rgba(46,165,103,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <span style={{ fontSize: 14, color: '#5ac98a' }}>✓</span>
+                        <div style={{ width: '100%', height: '100%', background: trigger.hidden ? 'transparent' : 'rgba(46,165,103,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {!trigger.hidden && <span style={{ fontSize: 14, color: '#5ac98a' }}>✓</span>}
                         </div>
                     ) : (
                         <input
                             ref={el => inputRefs.current[trigger.id] = el}
-                            type="text"
+                            type={trigger.isPassword ? "password" : "text"}
                             value={inputValues[trigger.id] || ''}
                             onChange={e => {
                                 const val = e.target.value
@@ -150,19 +154,57 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
                                 if (!isBlocked) handleInputChange(trigger, val)
                             }}
                             onKeyDown={e => { if (e.key === 'Enter' && !isBlocked) handleInputSubmit(trigger) }}
-                            placeholder={trigger.validationValue ? `"${trigger.validationValue}"` : '…'}
+                            placeholder={trigger.isPassword ? "••••••" : "Escribe aquí..."}
                             disabled={isBlocked}
                             style={{
                                 width: '100%', height: '100%',
-                                background: 'rgba(10,13,18,0.75)',
+                                background: trigger.hidden ? 'transparent' : 'rgba(10,13,18,0.75)',
                                 border: 'none', outline: 'none',
-                                color: '#e2eaf4',
+                                color: trigger.hidden ? 'var(--color-text-primary)' : '#e2eaf4',
                                 fontSize: 'clamp(11px, 1.3vw, 18px)',
                                 padding: '0 6px',
                                 fontFamily: 'inherit',
                                 caretColor: colors.label,
                             }}
                         />
+                    )}
+                </div>
+            )
+        }
+
+        if (trigger.type === 'keypress') {
+            return (
+                <div
+                    key={trigger.id}
+                    style={{
+                        position: 'absolute',
+                        left: `${hs.x}%`, top: `${hs.y}%`,
+                        width: `${hs.w}%`, height: `${hs.h}%`,
+                        borderRadius: 4,
+                        border: trigger.hidden ? 'none' : (isDone
+                            ? '1.5px solid rgba(46,165,103,0.6)'
+                            : `1.5px solid ${colors.borderActive}`),
+                        background: trigger.hidden ? 'transparent' : (isDone ? 'rgba(46,165,103,0.12)' : colors.bgActive),
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'all 200ms ease-out',
+                        opacity: isBlocked ? 0.35 : 1,
+                        pointerEvents: 'none', // just visual
+                    }}
+                >
+                    {!trigger.hidden && (
+                        isDone ? (
+                            <span style={{ fontSize: 14, color: '#5ac98a' }}>✓</span>
+                        ) : (
+                            <span style={{
+                                fontSize: 'clamp(10px, 1vw, 14px)',
+                                fontWeight: 700, color: colors.label,
+                                background: 'rgba(10,13,18,0.5)',
+                                padding: '2px 6px', borderRadius: 4,
+                                textTransform: 'uppercase', letterSpacing: '0.05em'
+                            }}>
+                                {trigger.keyCode || '?'}
+                            </span>
+                        )
                     )}
                 </div>
             )
@@ -219,12 +261,21 @@ export default function PreviewMode({ nodes, edges, onExit }) {
         }, 280)
     }, [])
 
-    // Called after each trigger completes — check if ALL are done
+    // Called after each trigger completes — check if ALL are done, OR if this specific trigger has a branch
     const onTriggerComplete = useCallback((triggerId, allTriggers) => {
         setCompletedTriggers(prev => {
             const next = new Set(prev)
             next.add(triggerId)
-            // Check if every trigger in this node is now done
+
+            // Check for explicit navigation branching
+            const completedTrigger = allTriggers.find(t => t.id === triggerId)
+            if (completedTrigger && completedTrigger.navigateTarget) {
+                // Ignore allDone check, branch immediately after a short delay
+                setTimeout(() => navigate(completedTrigger.navigateTarget), 350)
+                return next // the HUD will stick slightly then switch
+            }
+
+            // Normal progression: Check if every trigger in this node is now done
             const allDone = allTriggers.every(t => next.has(t.id))
             if (allDone) {
                 const nextId = getNextNodeId()
@@ -238,6 +289,38 @@ export default function PreviewMode({ nodes, edges, onExit }) {
             return next
         })
     }, [getNextNodeId, navigate])
+
+    // Global keydown listener for keypress triggers
+    useEffect(() => {
+        if (!currentNode || transitioning) return
+
+        const handleGlobalKeyDown = (e) => {
+            const currentTriggers = normalizeTriggers(currentNode.data)
+
+            currentTriggers.forEach(t => {
+                if (t.type !== 'keypress') return
+                if (completedTriggers.has(t.id)) return // already done
+
+                const isBlocked = t.dependsOn && !completedTriggers.has(t.dependsOn)
+                if (isBlocked) return
+
+                const expectedKey = t.keyCode || ''
+                // Match key (e.g. "Enter" === "Enter", or "a" === "a", ignoring case for letters if wanted)
+                const pressedKey = e.key === ' ' ? 'Space' : e.key
+
+                if (pressedKey.toLowerCase() === expectedKey.toLowerCase()) {
+                    // Prevent default if it's a structural key to avoid page jumping
+                    if (['Space', 'Enter', 'ArrowUp', 'ArrowDown'].includes(pressedKey)) {
+                        e.preventDefault()
+                    }
+                    onTriggerComplete(t.id, currentTriggers)
+                }
+            })
+        }
+
+        window.addEventListener('keydown', handleGlobalKeyDown)
+        return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+    }, [currentNode, completedTriggers, transitioning, onTriggerComplete])
 
     if (!currentNode) {
         return (
