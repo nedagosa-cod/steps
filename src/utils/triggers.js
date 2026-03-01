@@ -74,6 +74,20 @@ export const TRIGGER_COLORS = {
         bgActive: 'rgba(232,62,140,0.28)',
         label: '#e83e8c',
     },
+    dropdown: {
+        border: 'rgba(32,201,151,0.65)',
+        bg: 'rgba(32,201,151,0.10)',
+        borderActive: 'rgba(32,201,151,0.9)',
+        bgActive: 'rgba(32,201,151,0.28)',
+        label: '#20c997',
+    },
+    dependent_dropdown: {
+        border: 'rgba(214,51,132,0.65)',
+        bg: 'rgba(214,51,132,0.10)',
+        borderActive: 'rgba(214,51,132,0.9)',
+        bgActive: 'rgba(214,51,132,0.28)',
+        label: '#d63384',
+    },
 }
 
-export const TRIGGER_LABELS = { click: 'Click', double_click: 'Doble Clic', input: 'Input', keypress: 'Tecla' }
+export const TRIGGER_LABELS = { click: 'Click', double_click: 'Doble Clic', input: 'Input', keypress: 'Tecla', dropdown: 'Lista', dependent_dropdown: 'Lista Dep.' }

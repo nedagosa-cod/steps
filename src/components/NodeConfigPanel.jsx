@@ -1,5 +1,5 @@
-import React, { useRef } from 'react'
-import { Upload, MousePointer, Keyboard, Info, Image, Trash2 } from 'lucide-react'
+import React, { useRef, useState } from 'react'
+import { Upload, MousePointer, Keyboard, Info, Image, Trash2, GripVertical, ChevronDown, ChevronUp, TextCursorInput, List, ListTree } from 'lucide-react'
 import { normalizeTriggers, makeDefaultTrigger, TRIGGER_COLORS, TRIGGER_LABELS } from '../utils/triggers'
 
 /* ── Atoms ── */
@@ -49,19 +49,19 @@ const TextInput = ({ value, onChange, placeholder, mono }) => (
     />
 )
 
-const NumericInput = ({ value, onChange, label, accentColor }) => (
+const NumericInput = ({ value, onChange, label, accentColor, min = 0, max = 100, step = "0.01", suffix = "%" }) => (
     <div>
         <FieldLabel>{label}</FieldLabel>
         <div style={{ position: 'relative' }}>
             <input
-                type="number" min={0} max={100} step="0.01"
+                type="number" min={min} max={max} step={step}
                 value={value}
                 onChange={onChange}
                 style={{
                     width: '100%',
                     background: 'var(--color-control)',
                     border: '1px solid var(--color-border)',
-                    borderRadius: 6, padding: '5px 20px 5px 8px',
+                    borderRadius: 6, padding: '5px 25px 5px 8px',
                     fontSize: 12, fontVariantNumeric: 'tabular-nums',
                     color: 'var(--color-text-primary)', outline: 'none',
                     transition: 'border-color 150ms ease-out',
@@ -69,34 +69,57 @@ const NumericInput = ({ value, onChange, label, accentColor }) => (
                 onFocus={e => e.target.style.borderColor = accentColor || 'var(--color-border-strong)'}
                 onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
             />
-            <span style={{
-                position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)',
-                fontSize: 9, color: 'var(--color-text-muted)', pointerEvents: 'none',
-            }}>%</span>
+            {suffix && (
+                <span style={{
+                    position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)',
+                    fontSize: 9, color: 'var(--color-text-muted)', pointerEvents: 'none',
+                }}>{suffix}</span>
+            )}
         </div>
     </div>
 )
 
 /* ── TriggerCard ── */
-function TriggerCard({ trigger, index, allTriggers, nodes, onUpdate, onDelete }) {
+function TriggerCard({
+    trigger, index, allTriggers, nodes,
+    onUpdate, onDelete,
+    isExpanded, onToggleExpand,
+    draggableProps
+}) {
     const hs = trigger.hotspot || { x: 30, y: 40, w: 20, h: 10 }
     const colors = TRIGGER_COLORS[trigger.type] || TRIGGER_COLORS.click
     const setHotspot = (key, val) =>
         onUpdate({ hotspot: { ...hs, [key]: parseFloat(val) || 0 } })
 
     return (
-        <div style={{
-            border: `1px solid ${colors.border}`,
-            borderRadius: 8, overflow: 'hidden',
-            background: 'var(--color-control)',
-        }}>
+        <div
+            {...draggableProps}
+            style={{
+                border: `1px solid ${colors.border}`,
+                borderRadius: 8, overflow: 'hidden',
+                background: 'var(--color-control)',
+                ...draggableProps?.style
+            }}
+        >
             {/* Card header */}
             <div style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '6px 8px',
                 background: colors.bg,
-                borderBottom: `1px solid ${colors.border}`,
+                borderBottom: isExpanded ? `1px solid ${colors.border}` : 'none',
             }}>
+                {/* Drag Handle */}
+                <div
+                    title="Arrastrar para reordenar"
+                    style={{
+                        cursor: 'grab', color: 'var(--color-text-tertiary)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        padding: 2, marginRight: -2
+                    }}
+                >
+                    <GripVertical size={13} />
+                </div>
+
                 {/* Step number */}
                 <span style={{
                     width: 18, height: 18, borderRadius: '50%',
@@ -114,14 +137,16 @@ function TriggerCard({ trigger, index, allTriggers, nodes, onUpdate, onDelete })
                         { value: 'click', icon: MousePointer, label: 'Click' },
                         { value: 'double_click', icon: MousePointer, label: 'Dbl Clic' },
                         { value: 'keypress', icon: Keyboard, label: 'Tecla' },
-                        { value: 'input', icon: Keyboard, label: 'Input' },
+                        { value: 'input', icon: TextCursorInput, label: 'Input' },
+                        { value: 'dropdown', icon: List, label: 'Lista' },
+                        { value: 'dependent_dropdown', icon: ListTree, label: 'Lista Doble' },
                     ].map(({ value, icon: Icon, label }) => {
                         const active = trigger.type === value
                         const c = TRIGGER_COLORS[value]
                         return (
                             <button
                                 key={value}
-                                onClick={() => onUpdate({ type: value })}
+                                onClick={(e) => { e.stopPropagation(); onUpdate({ type: value }); }}
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: 4,
                                     padding: '3px 8px', borderRadius: 5,
@@ -138,6 +163,22 @@ function TriggerCard({ trigger, index, allTriggers, nodes, onUpdate, onDelete })
                         )
                     })}
                 </div>
+
+                {/* Collapse/Expand button */}
+                <button
+                    onClick={onToggleExpand}
+                    style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        width: 20, height: 20, borderRadius: 4,
+                        border: 'none', background: 'transparent',
+                        color: 'var(--color-text-muted)', cursor: 'pointer',
+                        transition: 'all 120ms ease-out',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'var(--color-text-primary)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-muted)'}
+                >
+                    {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                </button>
 
                 {/* Delete button */}
                 {allTriggers.length > 1 && (
@@ -164,134 +205,382 @@ function TriggerCard({ trigger, index, allTriggers, nodes, onUpdate, onDelete })
                 )}
             </div>
 
-            {/* Card body */}
-            <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {/* Hotspot — always shown for both types */}
-                <div>
-                    <FieldLabel>Posición sobre la imagen</FieldLabel>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
-                        <NumericInput label="X" value={hs.x} accentColor={colors.label} onChange={e => setHotspot('x', e.target.value)} />
-                        <NumericInput label="Y" value={hs.y} accentColor={colors.label} onChange={e => setHotspot('y', e.target.value)} />
-                        <NumericInput label="Ancho" value={hs.w} accentColor={colors.label} onChange={e => setHotspot('w', e.target.value)} />
-                        <NumericInput label="Alto" value={hs.h} accentColor={colors.label} onChange={e => setHotspot('h', e.target.value)} />
-                    </div>
-                </div>
-
-                {/* Validation text — only for input type */}
-                {trigger.type === 'input' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <div>
-                            <FieldLabel>Texto de validación</FieldLabel>
-                            <TextInput
-                                value={trigger.validationValue || ''}
-                                onChange={e => onUpdate({ validationValue: e.target.value })}
-                                placeholder="Texto exacto requerido"
-                                mono
-                            />
-                        </div>
-                        <label style={{
-                            display: 'flex', alignItems: 'center', gap: 6,
-                            cursor: 'pointer', fontSize: 11, color: 'var(--color-text-secondary)',
-                            userSelect: 'none'
-                        }}>
-                            <input
-                                type="checkbox"
-                                checked={trigger.isPassword || false}
-                                onChange={e => onUpdate({ isPassword: e.target.checked })}
-                                style={{
-                                    accentColor: colors.label,
-                                    width: 14, height: 14, cursor: 'pointer'
-                                }}
-                            />
-                            Campo tipo contraseña (ocultar texto)
-                        </label>
-                    </div>
-                )}
-
-                {/* Keypress capture — only for keypress type */}
-                {trigger.type === 'keypress' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <div>
-                            <FieldLabel>Presiona la tecla deseada</FieldLabel>
-                            <input
-                                type="text"
-                                value={trigger.keyCode || ''}
-                                placeholder="Haz clic aquí y presiona una tecla..."
-                                readOnly
-                                onKeyDown={e => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                    const key = e.key === ' ' ? 'Space' : e.key
-                                    onUpdate({ keyCode: key })
-                                }}
-                                style={{
-                                    width: '100%',
-                                    background: 'var(--color-control)',
-                                    border: `1px solid ${trigger.keyCode ? colors.borderActive : 'var(--color-border)'}`,
-                                    borderRadius: 6, padding: '6px 10px',
-                                    fontSize: 12, fontWeight: 600,
-                                    fontFamily: 'ui-monospace, monospace',
-                                    color: trigger.keyCode ? colors.label : 'var(--color-text-primary)',
-                                    outline: 'none', transition: 'all 150ms ease-out',
-                                    cursor: 'pointer', textAlign: 'center'
-                                }}
-                            />
-                        </div>
-                    </div>
-                )}
-
-                {/* Common setting: Hide visual styles */}
-                <label style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    cursor: 'pointer', fontSize: 11, color: 'var(--color-text-secondary)',
-                    userSelect: 'none', marginTop: trigger.type === 'input' ? 0 : 4,
-                }}>
-                    <input
-                        type="checkbox"
-                        checked={trigger.hidden || false}
-                        onChange={e => onUpdate({ hidden: e.target.checked })}
-                        style={{
-                            accentColor: colors.label,
-                            width: 14, height: 14, cursor: 'pointer'
-                        }}
-                    />
-                    Ocultar estilos visuales en la simulación
-                </label>
-
-                {/* Navigate Target (Branching) */}
-                <div>
-                    <FieldLabel>Navegar a (Opcional)</FieldLabel>
-                    <select
-                        value={trigger.navigateTarget || ''}
-                        onChange={e => onUpdate({ navigateTarget: e.target.value || null })}
-                        style={{
-                            width: '100%',
-                            background: 'var(--color-control)',
-                            border: '1px solid var(--color-border)',
-                            borderRadius: 6, padding: '5px 8px',
-                            fontSize: 11, color: 'var(--color-text-primary)', outline: 'none',
-                            transition: 'border-color 150ms ease-out',
-                            appearance: 'none',
-                        }}
-                        onFocus={e => e.target.style.borderColor = 'var(--color-border-strong)'}
-                        onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
-                    >
-                        <option value="">(Secuencia normal)</option>
-                        {nodes?.filter(n => n.id !== trigger.id).map(tNode => (
-                            <option key={tNode.id} value={tNode.id}>
-                                {tNode.data.label || 'Sin nombre'}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                {/* Dependency */}
-                {allTriggers.length > 1 && (
+            {/* Card body (Collapsible) */}
+            {isExpanded && (
+                <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {/* Hotspot — always shown for both types */}
                     <div>
-                        <FieldLabel>Depende de (Opcional)</FieldLabel>
+                        <FieldLabel>Posición sobre la imagen</FieldLabel>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+                            <NumericInput label="X" value={hs.x} accentColor={colors.label} onChange={e => setHotspot('x', e.target.value)} />
+                            <NumericInput label="Y" value={hs.y} accentColor={colors.label} onChange={e => setHotspot('y', e.target.value)} />
+                            <NumericInput label="Ancho" value={hs.w} accentColor={colors.label} onChange={e => setHotspot('w', e.target.value)} />
+                            <NumericInput label="Alto" value={hs.h} accentColor={colors.label} onChange={e => setHotspot('h', e.target.value)} />
+                        </div>
+                    </div>
+
+                    {/* Validation text — only for input type */}
+                    {trigger.type === 'input' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+                                <div>
+                                    <FieldLabel>Placeholder</FieldLabel>
+                                    <TextInput
+                                        value={trigger.placeholderText ?? ''}
+                                        onChange={e => onUpdate({ placeholderText: e.target.value })}
+                                        placeholder="Escribe aquí..."
+                                    />
+                                </div>
+                                <NumericInput
+                                    label="Tamaño de letra"
+                                    value={trigger.fontSize || ''}
+                                    accentColor={colors.label}
+                                    onChange={e => onUpdate({ fontSize: e.target.value ? parseInt(e.target.value) : null })}
+                                    min={8} max={72} step="1" suffix="px"
+                                />
+                            </div>
+                            <div>
+                                <FieldLabel>Texto de validación (Requerido para avanzar)</FieldLabel>
+                                <TextInput
+                                    value={trigger.validationValue || ''}
+                                    onChange={e => onUpdate({ validationValue: e.target.value })}
+                                    placeholder="Dejar vacío para avanzar con cualquier texto"
+                                    mono
+                                />
+                            </div>
+                            <label style={{
+                                display: 'flex', alignItems: 'center', gap: 6,
+                                cursor: 'pointer', fontSize: 11, color: 'var(--color-text-secondary)',
+                                userSelect: 'none'
+                            }}>
+                                <input
+                                    type="checkbox"
+                                    checked={trigger.isPassword || false}
+                                    onChange={e => onUpdate({ isPassword: e.target.checked })}
+                                    style={{
+                                        accentColor: colors.label,
+                                        width: 14, height: 14, cursor: 'pointer'
+                                    }}
+                                />
+                                Campo tipo contraseña (ocultar texto)
+                            </label>
+                        </div>
+                    )}
+
+                    {trigger.type === 'keypress' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div>
+                                <FieldLabel>Presiona la tecla deseada</FieldLabel>
+                                <input
+                                    type="text"
+                                    value={trigger.keyCode || ''}
+                                    placeholder="Haz clic aquí y presiona una tecla..."
+                                    readOnly
+                                    onKeyDown={e => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        const key = e.key === ' ' ? 'Space' : e.key
+                                        onUpdate({ keyCode: key })
+                                    }}
+                                    style={{
+                                        width: '100%',
+                                        background: 'var(--color-control)',
+                                        border: `1px solid ${trigger.keyCode ? colors.borderActive : 'var(--color-border)'}`,
+                                        borderRadius: 6, padding: '6px 10px',
+                                        fontSize: 12, fontWeight: 600,
+                                        fontFamily: 'ui-monospace, monospace',
+                                        color: trigger.keyCode ? colors.label : 'var(--color-text-primary)',
+                                        outline: 'none', transition: 'all 150ms ease-out',
+                                        cursor: 'pointer', textAlign: 'center'
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Dropdown configuration */}
+                    {trigger.type === 'dropdown' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <div>
+                                <FieldLabel>Opciones de la lista (Pega desde Excel, una por línea)</FieldLabel>
+                                <textarea
+                                    value={trigger.optionsText || ''}
+                                    onChange={e => onUpdate({ optionsText: e.target.value, validationValue: '' })}
+                                    placeholder="Opción 1&#10;Opción 2&#10;Opción 3"
+                                    rows={4}
+                                    style={{
+                                        width: '100%', resize: 'vertical',
+                                        background: 'var(--color-control)',
+                                        border: '1px solid var(--color-border)',
+                                        borderRadius: 6, padding: '6px 8px',
+                                        fontSize: 12, color: 'var(--color-text-primary)', outline: 'none',
+                                        fontFamily: 'ui-monospace, monospace', whiteSpace: 'pre',
+                                        transition: 'border-color 150ms ease-out',
+                                    }}
+                                    onFocus={e => e.target.style.borderColor = colors.label}
+                                    onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
+                                />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, alignItems: 'end' }}>
+                                <div>
+                                    <FieldLabel>Opción correcta (Requerida para avanzar)</FieldLabel>
+                                    <select
+                                        value={trigger.validationValue || ''}
+                                        onChange={e => onUpdate({ validationValue: e.target.value })}
+                                        style={{
+                                            width: '100%',
+                                            background: 'var(--color-control)',
+                                            border: '1px solid var(--color-border)',
+                                            borderRadius: 6, padding: '5px 8px', height: 26,
+                                            fontSize: 11, color: 'var(--color-text-primary)', outline: 'none',
+                                            transition: 'border-color 150ms ease-out',
+                                            appearance: 'none',
+                                        }}
+                                        onFocus={e => e.target.style.borderColor = colors.label}
+                                        onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
+                                    >
+                                        <option value="" disabled>Selecciona la correcta...</option>
+                                        {[...new Set((trigger.optionsText || '').split('\n').map(o => o.trim()).filter(Boolean))].map((opt, i) => (
+                                            <option key={i} value={opt}>{opt}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <NumericInput
+                                    label="Tamaño de letra"
+                                    value={trigger.fontSize || ''}
+                                    accentColor={colors.label}
+                                    onChange={e => onUpdate({ fontSize: e.target.value ? parseInt(e.target.value) : null })}
+                                    min={8} max={72} step="1" suffix="px"
+                                />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+                                <div>
+                                    <FieldLabel>Color de Fondo</FieldLabel>
+                                    <TextInput
+                                        value={trigger.bgColor || ''}
+                                        onChange={e => onUpdate({ bgColor: e.target.value })}
+                                        placeholder="Ej: #ffffff o transparent"
+                                    />
+                                </div>
+                                <div>
+                                    <FieldLabel>Color de Texto</FieldLabel>
+                                    <TextInput
+                                        value={trigger.textColor || ''}
+                                        onChange={e => onUpdate({ textColor: e.target.value })}
+                                        placeholder="Ej: #000000"
+                                    />
+                                </div>
+                            </div>
+                            <label style={{
+                                display: 'flex', alignItems: 'center', gap: 6,
+                                cursor: 'pointer', fontSize: 11, color: 'var(--color-text-secondary)',
+                                userSelect: 'none'
+                            }}>
+                                <input
+                                    type="checkbox"
+                                    checked={trigger.nativeStyles || false}
+                                    onChange={e => onUpdate({ nativeStyles: e.target.checked })}
+                                    style={{
+                                        accentColor: colors.label,
+                                        width: 14, height: 14, cursor: 'pointer'
+                                    }}
+                                />
+                                Usar apariencia HTML nativa del navegador
+                            </label>
+                        </div>
+                    )}
+
+                    {trigger.type === 'dependent_dropdown' && (() => {
+                        const rows = (trigger.optionsText || '').split('\n').filter(Boolean)
+                        const cMap = {}
+                        rows.forEach(r => {
+                            let parts = r.split(/\t/)
+                            if (parts.length < 2) parts = r.split(/ - /)
+                            if (parts.length < 2) parts = r.split(/;/)
+                            if (parts.length < 2) parts = r.split(/,/)
+                            if (parts.length < 2) parts = r.split(/ {2,}/)
+                            if (parts.length < 2 && r.includes('-')) {
+                                const idx = r.indexOf('-')
+                                parts = [r.substring(0, idx), r.substring(idx + 1)]
+                            }
+                            if (parts.length < 2 && r.includes(':')) {
+                                const idx = r.indexOf(':')
+                                parts = [r.substring(0, idx), r.substring(idx + 1)]
+                            }
+                            parts = parts.map(s => s.trim()).filter(Boolean)
+
+                            const colIdx = trigger.dataColumnIndex ? Math.max(2, parseInt(trigger.dataColumnIndex)) : 2
+                            let parentColIdx = colIdx - 2
+                            let childColIdx = colIdx - 1
+
+                            // Fallback: If only 2 columns exist, assume they are parent -> child
+                            if (parts.length === 2 && colIdx > 2) {
+                                parentColIdx = 0
+                                childColIdx = 1
+                            }
+
+                            if (parts.length > parentColIdx && parts.length > childColIdx) {
+                                const cat = parts[parentColIdx].toLowerCase()
+                                const sub = parts[childColIdx]
+                                if (!cMap[cat]) cMap[cat] = []
+                                if (!cMap[cat].includes(sub)) {
+                                    cMap[cat].push(sub)
+                                }
+                            }
+                        })
+                        const categories = Object.keys(cMap)
+
+                        // Find potential parents
+                        const parentTriggers = allTriggers.filter(t => t.id !== trigger.id && (t.type === 'dropdown' || t.type === 'input' || t.type === 'dependent_dropdown'))
+
+                        return (
+                            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                <div>
+                                    <FieldLabel>Depende de (Lista/Input Padre)</FieldLabel>
+                                    <select
+                                        value={trigger.dependsOnTriggerId || ''}
+                                        onChange={e => onUpdate({ dependsOnTriggerId: e.target.value })}
+                                        style={{
+                                            width: '100%', background: 'var(--color-bg)', border: '1px solid var(--color-border)',
+                                            borderRadius: 6, padding: '5px', fontSize: 11, color: 'var(--color-text-primary)', outline: 'none'
+                                        }}
+                                    >
+                                        <option value="">-- Selecciona un trigger --</option>
+                                        {parentTriggers.map(t => (
+                                            <option key={t.id} value={t.id}>
+                                                Paso {allTriggers.findIndex(tr => tr.id === t.id) + 1} - {TRIGGER_LABELS[t.type]}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <div style={{ flex: 1 }}>
+                                        <FieldLabel>Nivel de Datos (Columna a leer)</FieldLabel>
+                                        <NumericInput
+                                            value={trigger.dataColumnIndex || 2}
+                                            accentColor={colors.label}
+                                            onChange={e => {
+                                                const val = parseInt(e.target.value) || 2;
+                                                onUpdate({ dataColumnIndex: Math.max(2, val) });
+                                            }}
+                                            min={2} max={10} step="1" suffix=" (Nivel)"
+                                        />
+                                    </div>
+                                    <div style={{ flex: 1, fontSize: 11, color: 'var(--color-text-secondary)', lineHeight: 1.2 }}>
+                                        Nivel 2 lee Col 1 Padre y Col 2 Hijo. <br />Nivel 3 lee Col 2 Padre y Col 3 Hijo.
+                                    </div>
+                                </div>
+                                <div>
+                                    <FieldLabel>
+                                        Opciones (Pegar tabla de Excel)
+                                    </FieldLabel>
+                                    <textarea
+                                        value={trigger.optionsText || ''}
+                                        onChange={e => onUpdate({ optionsText: e.target.value })}
+                                        placeholder="Categoría 1 &#9; Subcategoría A&#10;Categoría 1 &#9; Subcategoría B&#10;Categoría 2 &#9; Subcategoría C"
+                                        style={{
+                                            width: '100%', minHeight: 70, resize: 'vertical',
+                                            padding: 8, borderRadius: 6, fontSize: 11,
+                                            background: 'var(--color-control)', color: 'var(--color-text-primary)',
+                                            border: '1px solid var(--color-border)', outline: 'none',
+                                            lineHeight: 1.4, fontFamily: 'monospace'
+                                        }}
+                                    />
+                                    <p style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 4 }}>
+                                        Copia dos columnas de Excel (Categoría y Subcategoría).
+                                    </p>
+                                </div>
+                                <div>
+                                    <FieldLabel>Opción Correcta</FieldLabel>
+                                    <select
+                                        value={trigger.validationValue || ''}
+                                        onChange={e => onUpdate({ validationValue: e.target.value })}
+                                        style={{
+                                            width: '100%', background: 'var(--color-bg)', border: '1px solid var(--color-border)',
+                                            borderRadius: 6, padding: '5px', fontSize: 11, color: 'var(--color-text-primary)', outline: 'none'
+                                        }}
+                                    >
+                                        <option value="">Cualquiera / Ninguna</option>
+                                        {categories.map((c, i) => (
+                                            <optgroup key={i} label={c} style={{ background: 'var(--color-bg)' }}>
+                                                {(cMap[c] || []).map((sub, j) => (
+                                                    <option key={j} value={sub}>{sub}</option>
+                                                ))}
+                                            </optgroup>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <NumericInput
+                                        label="Tamaño de letra"
+                                        value={trigger.fontSize || ''}
+                                        accentColor={colors.label}
+                                        onChange={e => onUpdate({ fontSize: e.target.value ? parseInt(e.target.value) : null })}
+                                        min={8} max={72} step="1" suffix="px"
+                                    />
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+                                    <div>
+                                        <FieldLabel>Color de Fondo</FieldLabel>
+                                        <TextInput
+                                            value={trigger.bgColor || ''}
+                                            onChange={e => onUpdate({ bgColor: e.target.value })}
+                                            placeholder="Ej: #ffffff o transparent"
+                                        />
+                                    </div>
+                                    <div>
+                                        <FieldLabel>Color de Texto</FieldLabel>
+                                        <TextInput
+                                            value={trigger.textColor || ''}
+                                            onChange={e => onUpdate({ textColor: e.target.value })}
+                                            placeholder="Ej: #000000"
+                                        />
+                                    </div>
+                                </div>
+                                <label style={{
+                                    display: 'flex', alignItems: 'center', gap: 6,
+                                    cursor: 'pointer', fontSize: 11, color: 'var(--color-text-secondary)',
+                                    userSelect: 'none'
+                                }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={trigger.nativeStyles || false}
+                                        onChange={e => onUpdate({ nativeStyles: e.target.checked })}
+                                        style={{
+                                            accentColor: colors.label,
+                                            width: 14, height: 14, cursor: 'pointer'
+                                        }}
+                                    />
+                                    Usar apariencia HTML nativa del navegador
+                                </label>
+                            </div>
+                        )
+                    })()}
+
+                    {/* Common setting: Hide visual styles */}
+                    <label style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        cursor: 'pointer', fontSize: 11, color: 'var(--color-text-secondary)',
+                        userSelect: 'none', marginTop: trigger.type === 'input' ? 0 : 4,
+                    }}>
+                        <input
+                            type="checkbox"
+                            checked={trigger.hidden || false}
+                            onChange={e => onUpdate({ hidden: e.target.checked })}
+                            style={{
+                                accentColor: colors.label,
+                                width: 14, height: 14, cursor: 'pointer'
+                            }}
+                        />
+                        Ocultar estilos visuales en la simulación
+                    </label>
+
+                    {/* Navigate Target (Branching) */}
+                    <div>
+                        <FieldLabel>Navegar a (Opcional)</FieldLabel>
                         <select
-                            value={trigger.dependsOn || ''}
-                            onChange={e => onUpdate({ dependsOn: e.target.value || null })}
+                            value={trigger.navigateTarget || ''}
+                            onChange={e => onUpdate({ navigateTarget: e.target.value || null })}
                             style={{
                                 width: '100%',
                                 background: 'var(--color-control)',
@@ -304,19 +593,48 @@ function TriggerCard({ trigger, index, allTriggers, nodes, onUpdate, onDelete })
                             onFocus={e => e.target.style.borderColor = 'var(--color-border-strong)'}
                             onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
                         >
-                            <option value="">(Ninguno)</option>
-                            {allTriggers.filter(t => t.id !== trigger.id).map(t => {
-                                const tIndex = allTriggers.findIndex(x => x.id === t.id) + 1
-                                return (
-                                    <option key={t.id} value={t.id}>
-                                        Paso {tIndex} ({TRIGGER_LABELS[t.type] || t.type})
-                                    </option>
-                                )
-                            })}
+                            <option value="">(Secuencia normal)</option>
+                            {nodes?.filter(n => n.id !== trigger.id).map(tNode => (
+                                <option key={tNode.id} value={tNode.id}>
+                                    {tNode.data.label || 'Sin nombre'}
+                                </option>
+                            ))}
                         </select>
                     </div>
-                )}
-            </div>
+
+                    {/* Dependency */}
+                    {allTriggers.length > 1 && (
+                        <div>
+                            <FieldLabel>Depende de (Opcional)</FieldLabel>
+                            <select
+                                value={trigger.dependsOn || ''}
+                                onChange={e => onUpdate({ dependsOn: e.target.value || null })}
+                                style={{
+                                    width: '100%',
+                                    background: 'var(--color-control)',
+                                    border: '1px solid var(--color-border)',
+                                    borderRadius: 6, padding: '5px 8px',
+                                    fontSize: 11, color: 'var(--color-text-primary)', outline: 'none',
+                                    transition: 'border-color 150ms ease-out',
+                                    appearance: 'none',
+                                }}
+                                onFocus={e => e.target.style.borderColor = 'var(--color-border-strong)'}
+                                onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
+                            >
+                                <option value="">(Ninguno)</option>
+                                {allTriggers.filter(t => t.id !== trigger.id).map(t => {
+                                    const tIndex = allTriggers.findIndex(x => x.id === t.id) + 1
+                                    return (
+                                        <option key={t.id} value={t.id}>
+                                            Paso {tIndex} ({TRIGGER_LABELS[t.type] || t.type})
+                                        </option>
+                                    )
+                                })}
+                            </select>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     )
 }
@@ -324,6 +642,9 @@ function TriggerCard({ trigger, index, allTriggers, nodes, onUpdate, onDelete })
 /* ── Main component ── */
 export default function NodeConfigPanel({ node, onUpdateNode, nodes }) {
     const fileInputRef = useRef(null)
+    const [draggedIdx, setDraggedIdx] = useState(null)
+    const [dragOverIdx, setDragOverIdx] = useState(null)
+    const [expandedState, setExpandedState] = useState({})
 
     if (!node) {
         return (
@@ -438,25 +759,76 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes }) {
 
             {triggers.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {triggers.map((trigger, idx) => (
-                        <React.Fragment key={trigger.id}>
-                            <TriggerCard
-                                trigger={trigger}
-                                index={idx}
-                                allTriggers={triggers}
-                                nodes={nodes}
-                                onUpdate={patch => updateTrigger(idx, patch)}
-                                onDelete={() => deleteTrigger(idx)}
-                            />
-                            {idx < triggers.length - 1 && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <div style={{ flex: 1, height: 1, background: 'var(--color-border-subtle)' }} />
-                                    <span style={{ fontSize: 9, color: 'var(--color-text-muted)', fontWeight: 600, letterSpacing: '0.08em' }}>LUEGO</span>
-                                    <div style={{ flex: 1, height: 1, background: 'var(--color-border-subtle)' }} />
-                                </div>
-                            )}
-                        </React.Fragment>
-                    ))}
+                    {triggers.map((trigger, idx) => {
+                        const isExpanded = expandedState[trigger.id] !== false // Default true
+                        const isDragged = draggedIdx === idx
+                        const isDragOver = dragOverIdx === idx
+
+                        const draggableProps = {
+                            draggable: true,
+                            onDragStart: (e) => {
+                                setDraggedIdx(idx)
+                                e.dataTransfer.effectAllowed = 'move'
+                                // Ghost image trick for cleaner drag
+                                const el = e.currentTarget
+                                e.dataTransfer.setDragImage(el, 20, 20)
+                            },
+                            onDragOver: (e) => {
+                                e.preventDefault() // Necessary to allow dropping
+                                if (draggedIdx !== null && draggedIdx !== idx) {
+                                    setDragOverIdx(idx)
+                                }
+                            },
+                            onDragLeave: () => {
+                                setDragOverIdx(null)
+                            },
+                            onDrop: (e) => {
+                                e.preventDefault()
+                                if (draggedIdx !== null && draggedIdx !== idx) {
+                                    const newTriggers = [...triggers]
+                                    const [draggedItem] = newTriggers.splice(draggedIdx, 1)
+                                    newTriggers.splice(idx, 0, draggedItem)
+                                    setTriggers(newTriggers)
+                                }
+                                setDraggedIdx(null)
+                                setDragOverIdx(null)
+                            },
+                            onDragEnd: () => {
+                                setDraggedIdx(null)
+                                setDragOverIdx(null)
+                            },
+                            style: {
+                                opacity: isDragged ? 0.4 : 1,
+                                outline: isDragOver ? '2px solid var(--color-brand)' : 'none',
+                                outlineOffset: 2,
+                                transform: isDragOver ? (draggedIdx < idx ? 'translateY(4px)' : 'translateY(-4px)') : 'none',
+                                transition: 'transform 150ms ease, outline 150ms ease, opacity 150ms ease',
+                            }
+                        }
+
+                        return (
+                            <React.Fragment key={trigger.id}>
+                                <TriggerCard
+                                    trigger={trigger}
+                                    index={idx}
+                                    allTriggers={triggers}
+                                    nodes={nodes}
+                                    onUpdate={patch => updateTrigger(idx, patch)}
+                                    onDelete={() => deleteTrigger(idx)}
+                                    isExpanded={isExpanded}
+                                    onToggleExpand={() => setExpandedState(prev => ({ ...prev, [trigger.id]: !isExpanded }))}
+                                    draggableProps={draggableProps}
+                                />
+                                {idx < triggers.length - 1 && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: isDragged ? 0.4 : 1 }}>
+                                        <div style={{ flex: 1, height: 1, background: 'var(--color-border-subtle)' }} />
+                                        <span style={{ fontSize: 9, color: 'var(--color-text-muted)', fontWeight: 600, letterSpacing: '0.08em' }}>LUEGO</span>
+                                        <div style={{ flex: 1, height: 1, background: 'var(--color-border-subtle)' }} />
+                                    </div>
+                                )}
+                            </React.Fragment>
+                        )
+                    })}
                 </div>
             )}
 
@@ -467,11 +839,19 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes }) {
             )}
 
             {/* Add trigger buttons */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                <AddBtn onClick={() => addTrigger('click')} icon={MousePointer} label="+ Click" color={TRIGGER_COLORS.click.label} />
-                <AddBtn onClick={() => addTrigger('double_click')} icon={MousePointer} label="+ Doble Clic" color={TRIGGER_COLORS.double_click.label} />
-                <AddBtn onClick={() => addTrigger('keypress')} icon={Keyboard} label="+ Tecla" color={TRIGGER_COLORS.keypress.label} />
-                <AddBtn onClick={() => addTrigger('input')} icon={Keyboard} label="+ Input" color={TRIGGER_COLORS.input.label} />
+            <div style={{
+                position: 'sticky', bottom: -16, margin: '10px -20px -16px -20px', padding: '16px 20px',
+                background: 'var(--color-surface)', borderTop: '1px solid var(--color-border)',
+                zIndex: 10
+            }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                    <AddBtn onClick={() => addTrigger('click')} icon={MousePointer} label="+ Click" color={TRIGGER_COLORS.click.label} />
+                    <AddBtn onClick={() => addTrigger('double_click')} icon={MousePointer} label="+ Doble Clic" color={TRIGGER_COLORS.double_click.label} />
+                    <AddBtn onClick={() => addTrigger('keypress')} icon={Keyboard} label="+ Tecla" color={TRIGGER_COLORS.keypress.label} />
+                    <AddBtn onClick={() => addTrigger('input')} icon={TextCursorInput} label="+ Input" color={TRIGGER_COLORS.input.label} />
+                    <AddBtn onClick={() => addTrigger('dropdown')} icon={List} label="+ Lista" color={TRIGGER_COLORS.dropdown.label} />
+                    <AddBtn onClick={() => addTrigger('dependent_dropdown')} icon={ListTree} label="+ Lista Doble" color={TRIGGER_COLORS.dependent_dropdown.label} />
+                </div>
             </div>
         </div>
     )

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react'
-import { X, CheckCircle, AlertCircle, GripHorizontal } from 'lucide-react'
+import { X, CheckCircle, AlertCircle, GripHorizontal, ChevronDown } from 'lucide-react'
 import { normalizeTriggers, TRIGGER_COLORS } from '../utils/triggers'
 
 function DraggableHUD({ children }) {
@@ -139,11 +139,7 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
                         pointerEvents: isBlocked ? 'none' : 'auto',
                     }}
                 >
-                    {isDone ? (
-                        <div style={{ width: '100%', height: '100%', background: trigger.hidden ? 'transparent' : 'rgba(46,165,103,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {!trigger.hidden && <span style={{ fontSize: 14, color: '#5ac98a' }}>✓</span>}
-                        </div>
-                    ) : (
+                    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
                         <input
                             ref={el => inputRefs.current[trigger.id] = el}
                             type={trigger.isPassword ? "password" : "text"}
@@ -151,23 +147,220 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
                             onChange={e => {
                                 const val = e.target.value
                                 setInputValues(prev => ({ ...prev, [trigger.id]: val }))
-                                if (!isBlocked) handleInputChange(trigger, val)
+                                if (!isBlocked && !isDone) handleInputChange(trigger, val)
                             }}
-                            onKeyDown={e => { if (e.key === 'Enter' && !isBlocked) handleInputSubmit(trigger) }}
-                            placeholder={trigger.isPassword ? "••••••" : "Escribe aquí..."}
-                            disabled={isBlocked}
+                            onKeyDown={e => { if (e.key === 'Enter' && !isBlocked && !isDone) handleInputSubmit(trigger) }}
+                            placeholder={trigger.placeholderText ?? (trigger.isPassword ? "••••••" : "Escribe aquí...")}
+                            disabled={isBlocked || isDone}
                             style={{
                                 width: '100%', height: '100%',
-                                background: trigger.hidden ? 'transparent' : 'rgba(10,13,18,0.75)',
+                                background: trigger.hidden ? 'transparent' : (isDone ? 'rgba(46,165,103,0.15)' : 'rgba(10,13,18,0.75)'),
                                 border: 'none', outline: 'none',
-                                color: trigger.hidden ? 'var(--color-text-primary)' : '#e2eaf4',
-                                fontSize: 'clamp(11px, 1.3vw, 18px)',
+                                color: trigger.hidden ? 'var(--color-text-primary)' : (isDone ? '#5ac98a' : '#e2eaf4'),
+                                fontSize: trigger.fontSize ? `${trigger.fontSize}px` : 'clamp(11px, 1.3vw, 18px)',
                                 padding: '0 6px',
                                 fontFamily: 'inherit',
                                 caretColor: colors.label,
                             }}
                         />
-                    )}
+                        {isDone && !trigger.hidden && (
+                            <div style={{
+                                position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                pointerEvents: 'none',
+                            }}>
+                                <span style={{ fontSize: 14, color: '#5ac98a' }}>✓</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )
+        }
+
+        if (trigger.type === 'dropdown') {
+            const options = [...new Set((trigger.optionsText || '').split('\n').map(o => o.trim()).filter(Boolean))]
+            const useNative = trigger.nativeStyles && !trigger.hidden
+            return (
+                <div
+                    key={trigger.id}
+                    style={{
+                        position: 'absolute',
+                        left: `${hs.x}%`, top: `${hs.y}%`,
+                        width: `${hs.w}%`, height: `${hs.h}%`,
+                        borderRadius: 4,
+                        border: trigger.hidden ? 'none' : (isDone
+                            ? '1.5px solid rgba(46,165,103,0.6)'
+                            : (useNative ? 'none' : `1.5px solid ${colors.borderActive}`)),
+                        overflow: 'hidden',
+                        display: 'flex', alignItems: 'center',
+                        transition: 'all 200ms ease-out',
+                        opacity: isBlocked ? 0.35 : 1,
+                        pointerEvents: isBlocked ? 'none' : 'auto',
+                    }}
+                >
+                    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                        <select
+                            value={inputValues[trigger.id] || ''}
+                            onChange={e => {
+                                const val = e.target.value
+                                setInputValues(prev => ({ ...prev, [trigger.id]: val }))
+                                if (!isBlocked && !isDone) {
+                                    if (trigger.validationValue && val === trigger.validationValue) {
+                                        handleTriggerClick(trigger.id)
+                                    }
+                                }
+                            }}
+                            disabled={isBlocked || isDone}
+                            style={{
+                                width: '100%', height: '100%',
+                                background: trigger.hidden ? 'transparent' : (
+                                    trigger.bgColor ? trigger.bgColor : (
+                                        isDone && !useNative ? 'rgba(46,165,103,0.15)' : (useNative ? '#ffffff' : 'rgba(10,13,18,0.75)')
+                                    )
+                                ),
+                                border: useNative ? (isDone ? '2px solid #5ac98a' : '1px solid #ccc') : 'none',
+                                borderRadius: useNative ? 4 : 0,
+                                outline: 'none',
+                                color: trigger.hidden ? 'var(--color-text-primary)' : (
+                                    trigger.textColor ? trigger.textColor : (
+                                        isDone && !useNative ? '#5ac98a' : (useNative ? '#000000' : '#e2eaf4')
+                                    )
+                                ),
+                                fontSize: trigger.fontSize ? `${trigger.fontSize}px` : (useNative ? '14px' : 'clamp(11px, 1.3vw, 18px)'),
+                                padding: useNative ? '0 8px' : '0 6px',
+                                fontFamily: useNative ? 'system-ui, sans-serif' : 'inherit',
+                                appearance: useNative ? 'auto' : 'none',
+                            }}
+                        >
+                            <option value="" disabled>Selecciona...</option>
+                            {options.map((opt, i) => <option key={i} value={opt}>{opt}</option>)}
+                        </select>
+                        {!useNative && (
+                            <div style={{
+                                position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none'
+                            }}>
+                                {isDone && !trigger.hidden ? (
+                                    <span style={{ fontSize: 14, color: trigger.textColor || '#5ac98a' }}>✓</span>
+                                ) : (
+                                    !trigger.hidden && <ChevronDown size={14} style={{ color: trigger.textColor || '#e2eaf4' }} />
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )
+        }
+
+        if (trigger.type === 'dependent_dropdown') {
+            const rows = (trigger.optionsText || '').split('\n').filter(Boolean)
+            const cMap = {}
+            rows.forEach(r => {
+                let parts = r.split(/\t/)
+                if (parts.length < 2) parts = r.split(/ - /)
+                if (parts.length < 2) parts = r.split(/;/)
+                if (parts.length < 2) parts = r.split(/,/)
+                if (parts.length < 2) parts = r.split(/ {2,}/)
+                if (parts.length < 2 && r.includes('-')) {
+                    const idx = r.indexOf('-')
+                    parts = [r.substring(0, idx), r.substring(idx + 1)]
+                }
+                if (parts.length < 2 && r.includes(':')) {
+                    const idx = r.indexOf(':')
+                    parts = [r.substring(0, idx), r.substring(idx + 1)]
+                }
+                parts = parts.map(s => s.trim()).filter(Boolean)
+
+                const colIdx = trigger.dataColumnIndex ? Math.max(2, parseInt(trigger.dataColumnIndex)) : 2
+                let parentColIdx = colIdx - 2
+                let childColIdx = colIdx - 1
+
+                if (parts.length === 2 && colIdx > 2) {
+                    parentColIdx = 0
+                    childColIdx = 1
+                }
+
+                if (parts.length > parentColIdx && parts.length > childColIdx) {
+                    const cat = parts[parentColIdx].toLowerCase()
+                    const sub = parts[childColIdx]
+                    if (!cMap[cat]) cMap[cat] = []
+                    if (!cMap[cat].includes(sub)) {
+                        cMap[cat].push(sub)
+                    }
+                }
+            })
+            const useNative = trigger.nativeStyles && !trigger.hidden
+
+            const rawParentVal = inputValues[trigger.dependsOnTriggerId] || ''
+            const parentVal = rawParentVal.toLowerCase().trim()
+            const subcategories = cMap[parentVal] || []
+
+            return (
+                <div
+                    key={trigger.id}
+                    style={{
+                        position: 'absolute',
+                        left: `${hs.x}%`, top: `${hs.y}%`,
+                        width: `${hs.w}%`, height: `${hs.h}%`,
+                        borderRadius: 4,
+                        border: trigger.hidden ? 'none' : (isDone
+                            ? '1.5px solid rgba(46,165,103,0.6)'
+                            : (useNative ? 'none' : `1.5px solid ${colors.borderActive}`)),
+                        overflow: 'hidden',
+                        display: 'flex', alignItems: 'center',
+                        transition: 'all 200ms ease-out',
+                        opacity: isBlocked || !parentVal ? 0.35 : 1,
+                        pointerEvents: isBlocked || !parentVal ? 'none' : 'auto',
+                    }}
+                >
+                    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                        <select
+                            value={inputValues[trigger.id] || ''}
+                            onChange={e => {
+                                const val = e.target.value
+                                setInputValues(prev => ({ ...prev, [trigger.id]: val }))
+                                if (!isBlocked && !isDone && trigger.validationValue && val === trigger.validationValue) {
+                                    handleTriggerClick(trigger.id)
+                                }
+                            }}
+                            disabled={isBlocked || isDone || !parentVal}
+                            style={{
+                                width: '100%', height: '100%',
+                                background: trigger.hidden ? 'transparent' : (
+                                    trigger.bgColor ? trigger.bgColor : (
+                                        isDone && !useNative ? 'rgba(46,165,103,0.15)' : (useNative ? '#ffffff' : 'rgba(10,13,18,0.75)')
+                                    )
+                                ),
+                                border: useNative ? (isDone ? '2px solid #5ac98a' : '1px solid #ccc') : 'none',
+                                borderRadius: useNative ? 4 : 0,
+                                outline: 'none',
+                                color: trigger.hidden ? 'var(--color-text-primary)' : (
+                                    trigger.textColor ? trigger.textColor : (
+                                        isDone && !useNative ? '#5ac98a' : (useNative ? '#000000' : '#e2eaf4')
+                                    )
+                                ),
+                                fontSize: trigger.fontSize ? `${trigger.fontSize}px` : (useNative ? '14px' : 'clamp(11px, 1.3vw, 18px)'),
+                                padding: useNative ? '0 8px' : '0 6px',
+                                fontFamily: useNative ? 'system-ui, sans-serif' : 'inherit',
+                                appearance: useNative ? 'auto' : 'none',
+                            }}
+                        >
+                            <option value="" disabled>Selecciona...</option>
+                            {subcategories.map((opt, i) => <option key={i} value={opt}>{opt}</option>)}
+                        </select>
+                        {!useNative && (
+                            <div style={{
+                                position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none'
+                            }}>
+                                {isDone && !trigger.hidden ? (
+                                    <span style={{ fontSize: 14, color: trigger.textColor || '#5ac98a' }}>✓</span>
+                                ) : (
+                                    !trigger.hidden && <ChevronDown size={14} style={{ color: trigger.textColor || '#e2eaf4' }} />
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
             )
         }

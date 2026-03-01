@@ -468,6 +468,7 @@
             // State
             let currentNodeId = order[0];
             let completedTriggers = new Set();
+            let inputValues = {};
             let isTransitioning = false;
             let errorTimer = null;
 
@@ -545,6 +546,7 @@
                 elMainContainer.classList.add("transitioning");
                 elProgressRow.classList.add("transitioning");
                 completedTriggers.clear();
+                inputValues = {};
 
                 setTimeout(() => {
                     currentNodeId = targetId;
@@ -629,20 +631,38 @@
                             else if (t.type === 'double_click') el.ondblclick = handler;
                         }
                     } else if (t.type === 'input') {
-                        if (isDone) {
-                            el.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:${t.hidden ? 'transparent' : 'var(--color-success-bg)'};">${t.hidden ? '' : '<span class="trigger-check">✓</span>'}</div>`;
-                        } else {
-                            let inp = document.createElement("input");
-                            inp.type = t.isPassword ? "password" : "text";
-                            inp.placeholder = t.isPassword ? "••••••" : "Escribe aquí...";
-                            if (isBlocked) inp.disabled = true;
-                            if (t.hidden) {
-                                inp.style.background = 'transparent';
-                                inp.style.color = 'var(--color-text-primary)';
-                            }
+                        let inp = document.createElement("input");
+                        inp.type = t.isPassword ? "password" : "text";
+                        inp.dataset.triggerId = t.id;
+                        inp.placeholder = t.placeholderText !== undefined ? t.placeholderText : (t.isPassword ? "••••••" : "Escribe aquí...");
+                        inp.value = inputValues[t.id] || "";
+                        if (isBlocked || isDone) inp.disabled = true;
 
+                        if (t.hidden) {
+                            inp.style.background = 'transparent';
+                            inp.style.color = 'var(--color-text-primary)';
+                        } else if (isDone) {
+                            inp.style.background = 'var(--color-success-bg)';
+                            inp.style.color = 'var(--color-success-text)';
+                        }
+                        if (t.fontSize) inp.style.fontSize = t.fontSize + 'px';
+
+                        if (!isDone) {
                             inp.oninput = (e) => {
                                 const val = e.target.value.trim();
+                                inputValues[t.id] = e.target.value;
+
+                                // Re-render to update any depended dropdowns
+                                render();
+                                // Re-focus the input since render destroyed it
+                                setTimeout(() => {
+                                    const newInp = document.querySelector(`input[data-trigger-id="${t.id}"]`)
+                                    if (newInp) {
+                                        newInp.focus();
+                                        newInp.setSelectionRange(newInp.value.length, newInp.value.length);
+                                    }
+                                }, 0);
+
                                 const expected = (t.validationValue || '').trim();
                                 if (expected && val === expected && !isBlocked) {
                                     handleTriggerComplete(t.id, triggers);
@@ -652,6 +672,7 @@
                             inp.onkeydown = (e) => {
                                 if (e.key === 'Enter' && !isBlocked) {
                                     const val = e.target.value.trim();
+                                    inputValues[t.id] = e.target.value;
                                     const expected = (t.validationValue || '').trim();
                                     if (!expected || val === expected) {
                                         handleTriggerComplete(t.id, triggers);
@@ -660,7 +681,259 @@
                                     }
                                 }
                             };
-                            el.appendChild(inp);
+                        }
+
+                        el.appendChild(inp);
+
+                        if (isDone && !t.hidden) {
+                            let check = document.createElement("span");
+                            check.className = "trigger-check";
+                            check.textContent = "✓";
+                            check.style.position = "absolute";
+                            check.style.pointerEvents = "none";
+                            el.appendChild(check);
+                        }
+                    } else if (t.type === 'dropdown') {
+                        const useNative = t.nativeStyles && !t.hidden;
+                        if (useNative) {
+                            el.style.border = 'none';
+                        }
+
+                        let sel = document.createElement("select");
+                        sel.value = inputValues[t.id] || "";
+                        if (isBlocked || isDone) sel.disabled = true;
+
+                        sel.style.width = '100%';
+                        sel.style.height = '100%';
+                        sel.style.outline = 'none';
+
+                        if (t.hidden) {
+                            sel.style.background = 'transparent';
+                            sel.style.color = 'var(--color-text-primary)';
+                            sel.style.border = 'none';
+                        } else {
+                            if (t.bgColor) sel.style.background = t.bgColor;
+                            else if (isDone && !useNative) sel.style.background = 'var(--color-success-bg)';
+                            else if (useNative) sel.style.background = '#ffffff';
+                            else sel.style.background = 'rgba(10,13,18,0.75)';
+
+                            if (t.textColor) sel.style.color = t.textColor;
+                            else if (isDone && !useNative) sel.style.color = 'var(--color-success-text)';
+                            else if (useNative) sel.style.color = '#000000';
+                            else sel.style.color = '#e2eaf4';
+
+                            if (useNative) {
+                                sel.style.border = isDone ? '2px solid #5ac98a' : '1px solid #ccc';
+                                sel.style.borderRadius = '4px';
+                            } else {
+                                sel.style.border = 'none';
+                                sel.style.borderRadius = '0';
+                            }
+                        }
+
+                        if (t.fontSize) sel.style.fontSize = t.fontSize + 'px';
+                        else if (useNative) sel.style.fontSize = '14px';
+
+                        sel.style.fontFamily = useNative ? 'system-ui, sans-serif' : 'inherit';
+                        sel.style.padding = useNative ? '0 8px' : '0 6px';
+                        sel.style.appearance = useNative ? 'auto' : 'none';
+
+                        let defaultOpt = document.createElement("option");
+                        defaultOpt.value = "";
+                        defaultOpt.disabled = true;
+                        defaultOpt.textContent = "Selecciona...";
+                        if (!inputValues[t.id]) defaultOpt.selected = true;
+                        sel.appendChild(defaultOpt);
+
+                        const options = [...new Set((t.optionsText || '').split('\n').map(o => o.trim()).filter(Boolean))];
+                        options.forEach(opt => {
+                            let optionEl = document.createElement("option");
+                            optionEl.value = opt;
+                            optionEl.textContent = opt;
+                            sel.appendChild(optionEl);
+                        });
+
+                        if (!isDone) {
+                            sel.onchange = (e) => {
+                                const val = e.target.value;
+                                inputValues[t.id] = val;
+
+                                // Re-render to update any dependent dropdowns
+                                render();
+
+                                if (!isBlocked) {
+                                    if (t.validationValue && val === t.validationValue) {
+                                        handleTriggerComplete(t.id, triggers);
+                                    } else {
+                                        showError();
+                                    }
+                                }
+                            };
+                        }
+
+                        el.appendChild(sel);
+
+                        if (!useNative) {
+                            let icon = document.createElement("span");
+                            icon.style.position = "absolute";
+                            icon.style.right = "8px";
+                            icon.style.top = "50%";
+                            icon.style.transform = "translateY(-50%)";
+                            icon.style.pointerEvents = "none";
+                            icon.style.display = "flex";
+
+                            if (isDone && !t.hidden) {
+                                icon.className = "trigger-check";
+                                icon.textContent = "✓";
+                                if (t.textColor) icon.style.color = t.textColor;
+                            } else if (!t.hidden) {
+                                const arrowColor = t.textColor || '#e2eaf4';
+                                icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${arrowColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>`;
+                            }
+                            el.appendChild(icon);
+                        }
+                    } else if (t.type === 'dependent_dropdown') {
+                        const useNative = t.nativeStyles && !t.hidden;
+                        if (useNative) el.style.border = 'none';
+
+                        el.style.display = 'flex';
+                        el.style.alignItems = 'center';
+
+                        const rows = (t.optionsText || '').split('\n').filter(Boolean);
+                        const cMap = {};
+                        rows.forEach(r => {
+                            let parts = r.split(/\t/);
+                            if (parts.length < 2) parts = r.split(/ - /);
+                            if (parts.length < 2) parts = r.split(/;/);
+                            if (parts.length < 2) parts = r.split(/,/);
+                            if (parts.length < 2) parts = r.split(/ {2,}/);
+                            if (parts.length < 2 && r.includes('-')) {
+                                const idx = r.indexOf('-');
+                                parts = [r.substring(0, idx), r.substring(idx + 1)];
+                            }
+                            if (parts.length < 2 && r.includes(':')) {
+                                const idx = r.indexOf(':');
+                                parts = [r.substring(0, idx), r.substring(idx + 1)];
+                            }
+                            parts = parts.map(s => s.trim()).filter(Boolean);
+
+                            const colIdx = t.dataColumnIndex ? Math.max(2, parseInt(t.dataColumnIndex)) : 2;
+                            let parentColIdx = colIdx - 2;
+                            let childColIdx = colIdx - 1;
+
+                            if (parts.length === 2 && colIdx > 2) {
+                                parentColIdx = 0;
+                                childColIdx = 1;
+                            }
+
+                            if (parts.length > parentColIdx && parts.length > childColIdx) {
+                                const cat = parts[parentColIdx].toLowerCase();
+                                const sub = parts[childColIdx];
+                                if (!cMap[cat]) cMap[cat] = [];
+                                if (!cMap[cat].includes(sub)) {
+                                    cMap[cat].push(sub);
+                                }
+                            }
+                        });
+
+                        const rawParentVal = inputValues[t.dependsOnTriggerId] || '';
+                        const parentVal = rawParentVal.toLowerCase().trim();
+                        const subcategories = cMap[parentVal] || [];
+
+                        let sel = document.createElement("select");
+                        sel.style.flex = "1";
+                        sel.style.width = '100%';
+                        sel.style.height = '100%';
+                        sel.style.outline = 'none';
+
+                        if (t.hidden) {
+                            sel.style.background = 'transparent';
+                            sel.style.color = 'var(--color-text-primary)';
+                            sel.style.border = 'none';
+                        } else {
+                            if (t.bgColor) sel.style.background = t.bgColor;
+                            else if (isDone && !useNative) sel.style.background = 'rgba(46,165,103,0.15)';
+                            else if (useNative) sel.style.background = '#ffffff';
+                            else sel.style.background = 'rgba(10,13,18,0.75)';
+
+                            if (t.textColor) sel.style.color = t.textColor;
+                            else if (isDone && !useNative) sel.style.color = '#5ac98a';
+                            else if (useNative) sel.style.color = '#000000';
+                            else sel.style.color = '#e2eaf4';
+
+                            if (useNative) {
+                                sel.style.border = isDone ? '2px solid #5ac98a' : '1px solid #ccc';
+                                sel.style.borderRadius = '4px';
+                            } else {
+                                sel.style.border = 'none';
+                                sel.style.borderRadius = '0';
+                            }
+                        }
+
+                        if (t.fontSize) sel.style.fontSize = t.fontSize + 'px';
+                        else if (useNative) sel.style.fontSize = '14px';
+                        else sel.style.fontSize = 'clamp(11px, 1.3vw, 18px)';
+
+                        sel.style.fontFamily = useNative ? 'system-ui, sans-serif' : 'inherit';
+                        sel.style.padding = useNative ? '0 8px' : '0 6px';
+                        sel.style.appearance = useNative ? 'auto' : 'none';
+
+                        sel.value = inputValues[t.id] || "";
+                        if (isBlocked || isDone || !parentVal) sel.disabled = true;
+
+                        let optEmpty = document.createElement("option");
+                        optEmpty.value = "";
+                        optEmpty.disabled = true;
+                        optEmpty.textContent = "Selecciona...";
+                        if (!inputValues[t.id]) optEmpty.selected = true;
+                        sel.appendChild(optEmpty);
+
+                        subcategories.forEach(opt => {
+                            let optionEl = document.createElement("option");
+                            optionEl.value = opt;
+                            optionEl.textContent = opt;
+                            if (opt === inputValues[t.id]) optionEl.selected = true;
+                            sel.appendChild(optionEl);
+                        });
+
+                        if (!isDone) {
+                            sel.onchange = (e) => {
+                                const val = e.target.value;
+                                inputValues[t.id] = val;
+
+                                // Re-render to update any downstream dependent dropdowns
+                                render();
+
+                                if (!isBlocked) {
+                                    if (t.validationValue && val === t.validationValue) {
+                                        handleTriggerComplete(t.id, triggers);
+                                    } else {
+                                        showError();
+                                    }
+                                }
+                            };
+                        }
+
+                        el.appendChild(sel);
+
+                        if (!useNative) {
+                            let icon = document.createElement("span");
+                            icon.style.position = "absolute";
+                            icon.style.right = "8px";
+                            icon.style.top = "50%";
+                            icon.style.transform = "translateY(-50%)";
+                            icon.style.pointerEvents = "none";
+                            icon.style.display = "flex";
+
+                            if (isDone && !t.hidden) {
+                                icon.className = "trigger-check";
+                                icon.textContent = "✓";
+                                if (t.textColor) icon.style.color = t.textColor;
+                            } else if (!t.hidden) {
+                                const arrowColor = t.textColor || '#e2eaf4';
+                                icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${arrowColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>`;
+                            }
+                            el.appendChild(icon);
                         }
                     } else if (t.type === 'keypress') {
                         if (isDone) {
