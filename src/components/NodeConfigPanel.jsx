@@ -86,6 +86,7 @@ function TriggerCard({
     isExpanded, onToggleExpand,
     draggableProps
 }) {
+    const [showAdvanced, setShowAdvanced] = useState(false)
     const hs = trigger.hotspot || { x: 30, y: 40, w: 20, h: 10 }
     const colors = TRIGGER_COLORS[trigger.type] || TRIGGER_COLORS.click
     const setHotspot = (key, val) =>
@@ -222,21 +223,12 @@ function TriggerCard({
                     {/* Validation text — only for input type */}
                     {trigger.type === 'input' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
-                                <div>
-                                    <FieldLabel>Placeholder</FieldLabel>
-                                    <TextInput
-                                        value={trigger.placeholderText ?? ''}
-                                        onChange={e => onUpdate({ placeholderText: e.target.value })}
-                                        placeholder="Escribe aquí..."
-                                    />
-                                </div>
-                                <NumericInput
-                                    label="Tamaño de letra"
-                                    value={trigger.fontSize || ''}
-                                    accentColor={colors.label}
-                                    onChange={e => onUpdate({ fontSize: e.target.value ? parseInt(e.target.value) : null })}
-                                    min={8} max={72} step="1" suffix="px"
+                            <div>
+                                <FieldLabel>Placeholder</FieldLabel>
+                                <TextInput
+                                    value={trigger.placeholderText ?? ''}
+                                    onChange={e => onUpdate({ placeholderText: e.target.value })}
+                                    placeholder="Escribe aquí..."
                                 />
                             </div>
                             <div>
@@ -248,22 +240,7 @@ function TriggerCard({
                                     mono
                                 />
                             </div>
-                            <label style={{
-                                display: 'flex', alignItems: 'center', gap: 6,
-                                cursor: 'pointer', fontSize: 11, color: 'var(--color-text-secondary)',
-                                userSelect: 'none'
-                            }}>
-                                <input
-                                    type="checkbox"
-                                    checked={trigger.isPassword || false}
-                                    onChange={e => onUpdate({ isPassword: e.target.checked })}
-                                    style={{
-                                        accentColor: colors.label,
-                                        width: 14, height: 14, cursor: 'pointer'
-                                    }}
-                                />
-                                Campo tipo contraseña (ocultar texto)
-                            </label>
+
                         </div>
                     )}
 
@@ -321,72 +298,29 @@ function TriggerCard({
                                     onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
                                 />
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, alignItems: 'end' }}>
-                                <div>
-                                    <FieldLabel>Opción correcta (Requerida para avanzar)</FieldLabel>
-                                    <select
-                                        value={trigger.validationValue || ''}
-                                        onChange={e => onUpdate({ validationValue: e.target.value })}
-                                        style={{
-                                            width: '100%',
-                                            background: 'var(--color-control)',
-                                            border: '1px solid var(--color-border)',
-                                            borderRadius: 6, padding: '5px 8px', height: 26,
-                                            fontSize: 11, color: 'var(--color-text-primary)', outline: 'none',
-                                            transition: 'border-color 150ms ease-out',
-                                            appearance: 'none',
-                                        }}
-                                        onFocus={e => e.target.style.borderColor = colors.label}
-                                        onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
-                                    >
-                                        <option value="" disabled>Selecciona la correcta...</option>
-                                        {[...new Set((trigger.optionsText || '').split('\n').map(o => o.trim()).filter(Boolean))].map((opt, i) => (
-                                            <option key={i} value={opt}>{opt}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <NumericInput
-                                    label="Tamaño de letra"
-                                    value={trigger.fontSize || ''}
-                                    accentColor={colors.label}
-                                    onChange={e => onUpdate({ fontSize: e.target.value ? parseInt(e.target.value) : null })}
-                                    min={8} max={72} step="1" suffix="px"
-                                />
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
-                                <div>
-                                    <FieldLabel>Color de Fondo</FieldLabel>
-                                    <TextInput
-                                        value={trigger.bgColor || ''}
-                                        onChange={e => onUpdate({ bgColor: e.target.value })}
-                                        placeholder="Ej: #ffffff o transparent"
-                                    />
-                                </div>
-                                <div>
-                                    <FieldLabel>Color de Texto</FieldLabel>
-                                    <TextInput
-                                        value={trigger.textColor || ''}
-                                        onChange={e => onUpdate({ textColor: e.target.value })}
-                                        placeholder="Ej: #000000"
-                                    />
-                                </div>
-                            </div>
-                            <label style={{
-                                display: 'flex', alignItems: 'center', gap: 6,
-                                cursor: 'pointer', fontSize: 11, color: 'var(--color-text-secondary)',
-                                userSelect: 'none'
-                            }}>
-                                <input
-                                    type="checkbox"
-                                    checked={trigger.nativeStyles || false}
-                                    onChange={e => onUpdate({ nativeStyles: e.target.checked })}
+                            <div>
+                                <FieldLabel>Opción correcta (Requerida para avanzar)</FieldLabel>
+                                <select
+                                    value={trigger.validationValue || ''}
+                                    onChange={e => onUpdate({ validationValue: e.target.value })}
                                     style={{
-                                        accentColor: colors.label,
-                                        width: 14, height: 14, cursor: 'pointer'
+                                        width: '100%',
+                                        background: 'var(--color-control)',
+                                        border: '1px solid var(--color-border)',
+                                        borderRadius: 6, padding: '5px 8px', height: 26,
+                                        fontSize: 11, color: 'var(--color-text-primary)', outline: 'none',
+                                        transition: 'border-color 150ms ease-out',
+                                        appearance: 'none',
                                     }}
-                                />
-                                Usar apariencia HTML nativa del navegador
-                            </label>
+                                    onFocus={e => e.target.style.borderColor = colors.label}
+                                    onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
+                                >
+                                    <option value="" disabled>Selecciona la correcta...</option>
+                                    {[...new Set((trigger.optionsText || '').split('\n').map(o => o.trim()).filter(Boolean))].map((opt, i) => (
+                                        <option key={i} value={opt}>{opt}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
                     )}
 
@@ -436,7 +370,7 @@ function TriggerCard({
                         return (
                             <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
                                 <div>
-                                    <FieldLabel>Depende de (Lista/Input Padre)</FieldLabel>
+                                    <FieldLabel>Anidada de (Lista/Input Padre)</FieldLabel>
                                     <select
                                         value={trigger.dependsOnTriggerId || ''}
                                         onChange={e => onUpdate({ dependsOnTriggerId: e.target.value })}
@@ -466,8 +400,8 @@ function TriggerCard({
                                             min={2} max={10} step="1" suffix=" (Nivel)"
                                         />
                                     </div>
-                                    <div style={{ flex: 1, fontSize: 11, color: 'var(--color-text-secondary)', lineHeight: 1.2 }}>
-                                        Nivel 2 lee Col 1 Padre y Col 2 Hijo. <br />Nivel 3 lee Col 2 Padre y Col 3 Hijo.
+                                    <div style={{ flex: 1, fontSize: 10, color: 'var(--color-text-muted)', lineHeight: 1.2 }}>
+                                        Nivel N extrae opciones de pares Columna N-1 y Columna N.<br />Aplica solo al pegar tablas grandes &gt;2 columnas.
                                     </div>
                                 </div>
                                 <div>
@@ -487,7 +421,7 @@ function TriggerCard({
                                         }}
                                     />
                                     <p style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 4 }}>
-                                        Copia dos columnas de Excel (Categoría y Subcategoría).
+                                        Copia columnas de Excel (Categoría Padre y Sus Hijos).
                                     </p>
                                 </div>
                                 <div>
@@ -510,97 +444,152 @@ function TriggerCard({
                                         ))}
                                     </select>
                                 </div>
-                                <div>
+                            </div>
+                        )
+                    })()}
+
+                    {/* Advanced Settings Toggle */}
+                    <div
+                        onClick={() => setShowAdvanced(!showAdvanced)}
+                        style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                            padding: '6px 0', marginTop: 4, cursor: 'pointer',
+                            color: 'var(--color-text-tertiary)',
+                            transition: 'color 150ms'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--color-text-primary)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-tertiary)'}
+                    >
+                        <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                            {showAdvanced ? 'Ocultar ajustes avanzados' : 'Mostrar ajustes avanzados'}
+                        </span>
+                        {showAdvanced ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </div>
+
+                    {showAdvanced && (
+                        <div style={{
+                            display: 'flex', flexDirection: 'column', gap: 10,
+                            paddingTop: 8, paddingBottom: 4, borderTop: '1px solid var(--color-border-subtle)'
+                        }}>
+
+                            {/* ADVANCED: Type-Specific */}
+                            {trigger.type === 'input' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                     <NumericInput
-                                        label="Tamaño de letra"
+                                        label="Tamaño de letra del input"
                                         value={trigger.fontSize || ''}
                                         accentColor={colors.label}
                                         onChange={e => onUpdate({ fontSize: e.target.value ? parseInt(e.target.value) : null })}
                                         min={8} max={72} step="1" suffix="px"
                                     />
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
-                                    <div>
-                                        <FieldLabel>Color de Fondo</FieldLabel>
-                                        <TextInput
-                                            value={trigger.bgColor || ''}
-                                            onChange={e => onUpdate({ bgColor: e.target.value })}
-                                            placeholder="Ej: #ffffff o transparent"
+                                    <label style={{
+                                        display: 'flex', alignItems: 'center', gap: 6,
+                                        cursor: 'pointer', fontSize: 11, color: 'var(--color-text-secondary)',
+                                        userSelect: 'none'
+                                    }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={trigger.isPassword || false}
+                                            onChange={e => onUpdate({ isPassword: e.target.checked })}
+                                            style={{ accentColor: colors.label, width: 14, height: 14, cursor: 'pointer' }}
                                         />
-                                    </div>
-                                    <div>
-                                        <FieldLabel>Color de Texto</FieldLabel>
-                                        <TextInput
-                                            value={trigger.textColor || ''}
-                                            onChange={e => onUpdate({ textColor: e.target.value })}
-                                            placeholder="Ej: #000000"
-                                        />
-                                    </div>
+                                        Campo tipo contraseña (ocultar texto tipeado)
+                                    </label>
                                 </div>
-                                <label style={{
-                                    display: 'flex', alignItems: 'center', gap: 6,
-                                    cursor: 'pointer', fontSize: 11, color: 'var(--color-text-secondary)',
-                                    userSelect: 'none'
-                                }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={trigger.nativeStyles || false}
-                                        onChange={e => onUpdate({ nativeStyles: e.target.checked })}
-                                        style={{
-                                            accentColor: colors.label,
-                                            width: 14, height: 14, cursor: 'pointer'
-                                        }}
-                                    />
-                                    Usar apariencia HTML nativa del navegador
-                                </label>
+                            )}
+
+                            {(trigger.type === 'dropdown' || trigger.type === 'dependent_dropdown') && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+                                        <div style={{ gridColumn: '1 / -1' }}>
+                                            <NumericInput
+                                                label="Tamaño de letra"
+                                                value={trigger.fontSize || ''}
+                                                accentColor={colors.label}
+                                                onChange={e => onUpdate({ fontSize: e.target.value ? parseInt(e.target.value) : null })}
+                                                min={8} max={72} step="1" suffix="px"
+                                            />
+                                        </div>
+                                        <div>
+                                            <FieldLabel>Color de Fondo</FieldLabel>
+                                            <TextInput
+                                                value={trigger.bgColor || ''}
+                                                onChange={e => onUpdate({ bgColor: e.target.value })}
+                                                placeholder="Ej: transparent o #ffffff"
+                                            />
+                                        </div>
+                                        <div>
+                                            <FieldLabel>Color de Texto</FieldLabel>
+                                            <TextInput
+                                                value={trigger.textColor || ''}
+                                                onChange={e => onUpdate({ textColor: e.target.value })}
+                                                placeholder="Ej: #000000"
+                                            />
+                                        </div>
+                                    </div>
+                                    <label style={{
+                                        display: 'flex', alignItems: 'center', gap: 6,
+                                        cursor: 'pointer', fontSize: 11, color: 'var(--color-text-secondary)',
+                                        userSelect: 'none'
+                                    }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={trigger.nativeStyles || false}
+                                            onChange={e => onUpdate({ nativeStyles: e.target.checked })}
+                                            style={{ accentColor: colors.label, width: 14, height: 14, cursor: 'pointer' }}
+                                        />
+                                        Usar apariencia HTML nativa del navegador para este elemento
+                                    </label>
+                                </div>
+                            )}
+
+                            {/* ADVANCED: Generic */}
+                            <label style={{
+                                display: 'flex', alignItems: 'center', gap: 6,
+                                cursor: 'pointer', fontSize: 11, color: 'var(--color-text-secondary)',
+                                userSelect: 'none',
+                                marginTop: (trigger.type === 'click' || trigger.type === 'double_click' || trigger.type === 'keypress') ? 0 : 8
+                            }}>
+                                <input
+                                    type="checkbox"
+                                    checked={trigger.hidden || false}
+                                    onChange={e => onUpdate({ hidden: e.target.checked })}
+                                    style={{ accentColor: colors.label, width: 14, height: 14, cursor: 'pointer' }}
+                                />
+                                Ocultar área/estilos durante la simulación libre (Hotspot invisible)
+                            </label>
+
+                            {/* Navigate Target (Branching) */}
+                            <div>
+                                <FieldLabel>Navegar a pantalla (Opcional - Ramificación)</FieldLabel>
+                                <select
+                                    value={trigger.navigateTarget || ''}
+                                    onChange={e => onUpdate({ navigateTarget: e.target.value || null })}
+                                    style={{
+                                        width: '100%',
+                                        background: 'var(--color-control)',
+                                        border: '1px solid var(--color-border)',
+                                        borderRadius: 6, padding: '5px 8px',
+                                        fontSize: 11, color: 'var(--color-text-primary)', outline: 'none',
+                                        transition: 'border-color 150ms ease-out',
+                                        appearance: 'none',
+                                    }}
+                                    onFocus={e => e.target.style.borderColor = 'var(--color-border-strong)'}
+                                    onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
+                                >
+                                    <option value="">(Secuencia normal lineal)</option>
+                                    {nodes?.filter(n => n.id !== trigger.id).map(tNode => (
+                                        <option key={tNode.id} value={tNode.id}>
+                                            {tNode.data.label || 'Sin nombre'}
+                                        </option>
+                                    ))}
+                                </select>
+                                <p style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 4, lineHeight: 1.25 }}>
+                                    Si seleccionas una pantalla, al completar la simulación saltará a ella directamente perdiendo el progreso actual en esta pantalla. Útil para bifurcaciones tipo "Acepta/Cancela".
+                                </p>
                             </div>
-                        )
-                    })()}
-
-                    {/* Common setting: Hide visual styles */}
-                    <label style={{
-                        display: 'flex', alignItems: 'center', gap: 6,
-                        cursor: 'pointer', fontSize: 11, color: 'var(--color-text-secondary)',
-                        userSelect: 'none', marginTop: trigger.type === 'input' ? 0 : 4,
-                    }}>
-                        <input
-                            type="checkbox"
-                            checked={trigger.hidden || false}
-                            onChange={e => onUpdate({ hidden: e.target.checked })}
-                            style={{
-                                accentColor: colors.label,
-                                width: 14, height: 14, cursor: 'pointer'
-                            }}
-                        />
-                        Ocultar estilos visuales en la simulación
-                    </label>
-
-                    {/* Navigate Target (Branching) */}
-                    <div>
-                        <FieldLabel>Navegar a (Opcional)</FieldLabel>
-                        <select
-                            value={trigger.navigateTarget || ''}
-                            onChange={e => onUpdate({ navigateTarget: e.target.value || null })}
-                            style={{
-                                width: '100%',
-                                background: 'var(--color-control)',
-                                border: '1px solid var(--color-border)',
-                                borderRadius: 6, padding: '5px 8px',
-                                fontSize: 11, color: 'var(--color-text-primary)', outline: 'none',
-                                transition: 'border-color 150ms ease-out',
-                                appearance: 'none',
-                            }}
-                            onFocus={e => e.target.style.borderColor = 'var(--color-border-strong)'}
-                            onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
-                        >
-                            <option value="">(Secuencia normal)</option>
-                            {nodes?.filter(n => n.id !== trigger.id).map(tNode => (
-                                <option key={tNode.id} value={tNode.id}>
-                                    {tNode.data.label || 'Sin nombre'}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                        </div>
+                    )}
 
                     {/* Dependency */}
                     {allTriggers.length > 1 && (

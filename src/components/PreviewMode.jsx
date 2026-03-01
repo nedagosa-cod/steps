@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react'
-import { X, CheckCircle, AlertCircle, GripHorizontal, ChevronDown } from 'lucide-react'
+import { X, CheckCircle, AlertCircle, GripHorizontal, ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
 import { normalizeTriggers, TRIGGER_COLORS } from '../utils/triggers'
 
 function DraggableHUD({ children }) {
@@ -205,12 +205,12 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
                                 const val = e.target.value
                                 setInputValues(prev => ({ ...prev, [trigger.id]: val }))
                                 if (!isBlocked && !isDone) {
-                                    if (trigger.validationValue && val === trigger.validationValue) {
-                                        handleTriggerClick(trigger.id)
+                                    if (!trigger.validationValue || val === trigger.validationValue) {
+                                        handleClickTrigger(trigger)
                                     }
                                 }
                             }}
-                            disabled={isBlocked || isDone}
+                            disabled={isBlocked}
                             style={{
                                 width: '100%', height: '100%',
                                 background: trigger.hidden ? 'transparent' : (
@@ -319,11 +319,13 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
                             onChange={e => {
                                 const val = e.target.value
                                 setInputValues(prev => ({ ...prev, [trigger.id]: val }))
-                                if (!isBlocked && !isDone && trigger.validationValue && val === trigger.validationValue) {
-                                    handleTriggerClick(trigger.id)
+                                if (!isBlocked && !isDone) {
+                                    if (!trigger.validationValue || val === trigger.validationValue) {
+                                        handleClickTrigger(trigger)
+                                    }
                                 }
                             }}
-                            disabled={isBlocked || isDone || !parentVal}
+                            disabled={isBlocked || !parentVal}
                             style={{
                                 width: '100%', height: '100%',
                                 background: trigger.hidden ? 'transparent' : (
@@ -416,7 +418,9 @@ export default function PreviewMode({ nodes, edges, onExit }) {
     const [error, setError] = useState('')
     const [success, setSuccess] = useState(false)
     const [transitioning, setTransitioning] = useState(false)
+    const [isFullscreen, setIsFullscreen] = useState(false)
 
+    const containerRef = useRef(null)
     const imgWrapperRef = useRef(null)
     const inputRefs = useRef({})
 
@@ -555,8 +559,26 @@ export default function PreviewMode({ nodes, edges, onExit }) {
         }
     }
 
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement)
+        }
+        document.addEventListener('fullscreenchange', handleFullscreenChange)
+        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+    }, [])
+
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            containerRef.current?.requestFullscreen().catch(err => {
+                console.warn(`Error al intentar pantalla completa: ${err.message}`)
+            })
+        } else {
+            document.exitFullscreen()
+        }
+    }
+
     return (
-        <div style={{
+        <div ref={containerRef} style={{
             position: 'fixed', inset: 0, zIndex: 50,
             background: 'rgba(10,13,18,0.97)',
             display: 'flex', flexDirection: 'column',
@@ -592,21 +614,49 @@ export default function PreviewMode({ nodes, edges, onExit }) {
                         </div>
                     </div>
 
-                    <button
-                        onClick={onExit}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: 4,
-                            padding: '4px 8px', borderRadius: 6,
-                            border: '1px solid var(--color-border)', background: 'transparent',
-                            cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: 10, fontWeight: 500,
-                            transition: 'all 150ms ease-out', flexShrink: 0
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-border-strong)'; e.currentTarget.style.color = 'var(--color-text-primary)' }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-secondary)' }}
-                    >
-                        <X size={12} />
-                        Salir
-                    </button>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                            onClick={toggleFullscreen}
+                            style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                width: 26, height: 26, borderRadius: 6,
+                                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                                color: 'var(--color-text-secondary)',
+                                cursor: 'pointer', transition: 'all 150ms'
+                            }}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
+                                e.currentTarget.style.color = 'var(--color-text-primary)'
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+                                e.currentTarget.style.color = 'var(--color-text-secondary)'
+                            }}
+                            title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+                        >
+                            {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+                        </button>
+                        <button
+                            onClick={onExit}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 4,
+                                padding: '4px 8px', borderRadius: 6,
+                                background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
+                                color: 'var(--color-text-secondary)', fontSize: 11, cursor: 'pointer',
+                                transition: 'all 150ms'
+                            }}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
+                                e.currentTarget.style.color = 'var(--color-text-primary)'
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.background = 'transparent'
+                                e.currentTarget.style.color = 'var(--color-text-secondary)'
+                            }}
+                        >
+                            <X size={12} /> Salir
+                        </button>
+                    </div>
                 </div>
 
                 {/* ── Trigger progress dots (when > 1 trigger) ── */}

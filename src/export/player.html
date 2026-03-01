@@ -404,6 +404,33 @@
                         <span class="brand">Playback</span>
                         <span style="color:var(--color-border); font-size:10px;">·</span>
                         <span class="screen-name" id="ui-screen-name">Loading...</span>
+
+                        <!-- Fullscreen Toggle Button -->
+                        <button id="ui-fullscreen-btn" title="Pantalla completa" style="
+                            display: flex; align-items: center; justify-content: center;
+                            width: 26px; height: 26px; border-radius: 6px;
+                            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+                            color: var(--color-text-secondary); cursor: pointer; transition: all 150ms;
+                            margin-left: auto;
+                        " onmouseenter="this.style.background='rgba(255,255,255,0.1)'; this.style.color='var(--color-text-primary)'"
+                            onmouseleave="this.style.background='rgba(255,255,255,0.05)'; this.style.color='var(--color-text-secondary)'">
+                            <svg id="icon-maximize" xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                                <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+                                <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+                                <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+                            </svg>
+                            <svg id="icon-minimize" xmlns="http://www.w3.org/2000/svg" width="13" height="13"
+                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                                <path d="M8 3v3a2 2 0 0 1-2 2H3" />
+                                <path d="M21 8h-3a2 2 0 0 1-2-2V3" />
+                                <path d="M3 16h3a2 2 0 0 1 2 2v3" />
+                                <path d="M16 21v-3a2 2 0 0 1 2-2h3" />
+                            </svg>
+                        </button>
                     </div>
                     <div class="step-pills" id="ui-step-indicator">
                         <!-- Pills injected here -->
@@ -447,6 +474,33 @@
                 document.getElementById("ui-screen-name").textContent = "Error: Datos no encontrados.";
                 return;
             }
+
+            // Fullscreen Logic
+            const fsBtn = document.getElementById("ui-fullscreen-btn");
+            const iconMax = document.getElementById("icon-maximize");
+            const iconMin = document.getElementById("icon-minimize");
+
+            document.addEventListener('fullscreenchange', () => {
+                if (document.fullscreenElement) {
+                    iconMax.style.display = 'none';
+                    iconMin.style.display = 'block';
+                    fsBtn.title = "Salir de pantalla completa";
+                } else {
+                    iconMax.style.display = 'block';
+                    iconMin.style.display = 'none';
+                    fsBtn.title = "Pantalla completa";
+                }
+            });
+
+            fsBtn.addEventListener('click', () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(err => {
+                        console.warn(`Error pantalla completa: ${err.message}`);
+                    });
+                } else {
+                    document.exitFullscreen();
+                }
+            });
 
             const { nodes, edges } = window.SIM_DATA;
             if (nodes.length === 0) {
@@ -701,7 +755,7 @@
 
                         let sel = document.createElement("select");
                         sel.value = inputValues[t.id] || "";
-                        if (isBlocked || isDone) sel.disabled = true;
+                        if (isBlocked) sel.disabled = true;
 
                         sel.style.width = '100%';
                         sel.style.height = '100%';
@@ -753,23 +807,21 @@
                             sel.appendChild(optionEl);
                         });
 
-                        if (!isDone) {
-                            sel.onchange = (e) => {
-                                const val = e.target.value;
-                                inputValues[t.id] = val;
+                        sel.onchange = (e) => {
+                            const val = e.target.value;
+                            inputValues[t.id] = val;
 
-                                // Re-render to update any dependent dropdowns
-                                render();
+                            // Re-render to update any dependent dropdowns
+                            render();
 
-                                if (!isBlocked) {
-                                    if (t.validationValue && val === t.validationValue) {
-                                        handleTriggerComplete(t.id, triggers);
-                                    } else {
-                                        showError();
-                                    }
+                            if (!isBlocked && !isDone) {
+                                if (!t.validationValue || val === t.validationValue) {
+                                    handleTriggerComplete(t.id, triggers);
+                                } else if (t.validationValue && val !== t.validationValue) {
+                                    showError();
                                 }
-                            };
-                        }
+                            }
+                        };
 
                         el.appendChild(sel);
 
@@ -879,7 +931,7 @@
                         sel.style.appearance = useNative ? 'auto' : 'none';
 
                         sel.value = inputValues[t.id] || "";
-                        if (isBlocked || isDone || !parentVal) sel.disabled = true;
+                        if (isBlocked || !parentVal) sel.disabled = true;
 
                         let optEmpty = document.createElement("option");
                         optEmpty.value = "";
@@ -896,23 +948,21 @@
                             sel.appendChild(optionEl);
                         });
 
-                        if (!isDone) {
-                            sel.onchange = (e) => {
-                                const val = e.target.value;
-                                inputValues[t.id] = val;
+                        sel.onchange = (e) => {
+                            const val = e.target.value;
+                            inputValues[t.id] = val;
 
-                                // Re-render to update any downstream dependent dropdowns
-                                render();
+                            // Re-render to update any downstream dependent dropdowns
+                            render();
 
-                                if (!isBlocked) {
-                                    if (t.validationValue && val === t.validationValue) {
-                                        handleTriggerComplete(t.id, triggers);
-                                    } else {
-                                        showError();
-                                    }
+                            if (!isBlocked && !isDone) {
+                                if (!t.validationValue || val === t.validationValue) {
+                                    handleTriggerComplete(t.id, triggers);
+                                } else if (t.validationValue && val !== t.validationValue) {
+                                    showError();
                                 }
-                            };
-                        }
+                            }
+                        };
 
                         el.appendChild(sel);
 
