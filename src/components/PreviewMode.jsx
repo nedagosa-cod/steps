@@ -78,7 +78,11 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
         const hs = trigger.hotspot || { x: 30, y: 40, w: 20, h: 10 }
         const colors = TRIGGER_COLORS[trigger.type] || TRIGGER_COLORS.click
         const isDone = completedTriggers.has(trigger.id)
-        const isBlocked = trigger.dependsOn && !completedTriggers.has(trigger.dependsOn)
+        const depsArray = Array.isArray(trigger.dependsOn)
+            ? trigger.dependsOn
+            : (trigger.dependsOn ? [trigger.dependsOn] : [])
+
+        const isBlocked = depsArray.length > 0 && depsArray.some(depId => !completedTriggers.has(depId))
 
         if (trigger.type === 'click' || trigger.type === 'double_click') {
             const isClick = trigger.type === 'click'

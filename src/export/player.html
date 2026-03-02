@@ -655,7 +655,9 @@
                 triggers.forEach(t => {
                     const hs = t.hotspot;
                     const isDone = completedTriggers.has(t.id);
-                    const isBlocked = t.dependsOn && !completedTriggers.has(t.dependsOn);
+
+                    const depsArray = Array.isArray(t.dependsOn) ? t.dependsOn : (t.dependsOn ? [t.dependsOn] : []);
+                    const isBlocked = depsArray.length > 0 && depsArray.some(depId => !completedTriggers.has(depId));
 
                     let el = document.createElement("div");
                     el.className = `trigger trigger-${t.type}`;

@@ -591,35 +591,52 @@ function TriggerCard({
                         </div>
                     )}
 
-                    {/* Dependency */}
+                    {/* Multiple Dependencies */}
                     {allTriggers.length > 1 && (
-                        <div>
+                        <div style={{ marginTop: 8 }}>
                             <FieldLabel>Depende de (Opcional)</FieldLabel>
-                            <select
-                                value={trigger.dependsOn || ''}
-                                onChange={e => onUpdate({ dependsOn: e.target.value || null })}
-                                style={{
-                                    width: '100%',
-                                    background: 'var(--color-control)',
-                                    border: '1px solid var(--color-border)',
-                                    borderRadius: 6, padding: '5px 8px',
-                                    fontSize: 11, color: 'var(--color-text-primary)', outline: 'none',
-                                    transition: 'border-color 150ms ease-out',
-                                    appearance: 'none',
-                                }}
-                                onFocus={e => e.target.style.borderColor = 'var(--color-border-strong)'}
-                                onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
-                            >
-                                <option value="">(Ninguno)</option>
+                            <p style={{ fontSize: 10, color: 'var(--color-text-muted)', marginBottom: 6, lineHeight: 1.2 }}>
+                                Este paso permanecerá bloqueado hasta que completes los triggers seleccionados.
+                            </p>
+                            <div style={{
+                                display: 'flex', flexDirection: 'column', gap: 6,
+                                background: 'var(--color-surface)', padding: 8, borderRadius: 6,
+                                border: '1px solid var(--color-border)',
+                                maxHeight: 120, overflowY: 'auto'
+                            }}>
                                 {allTriggers.filter(t => t.id !== trigger.id).map(t => {
                                     const tIndex = allTriggers.findIndex(x => x.id === t.id) + 1
+
+                                    // Normalize dependsOn to array
+                                    const depsArray = Array.isArray(trigger.dependsOn)
+                                        ? trigger.dependsOn
+                                        : (trigger.dependsOn ? [trigger.dependsOn] : [])
+
+                                    const isChecked = depsArray.includes(t.id)
+
                                     return (
-                                        <option key={t.id} value={t.id}>
-                                            Paso {tIndex} ({TRIGGER_LABELS[t.type] || t.type})
-                                        </option>
+                                        <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={isChecked}
+                                                onChange={(e) => {
+                                                    let newDeps = [...depsArray]
+                                                    if (e.target.checked) {
+                                                        newDeps.push(t.id)
+                                                    } else {
+                                                        newDeps = newDeps.filter(id => id !== t.id)
+                                                    }
+                                                    onUpdate({ dependsOn: newDeps.length > 0 ? newDeps : null })
+                                                }}
+                                                style={{ cursor: 'pointer', accentColor: 'var(--color-brand)' }}
+                                            />
+                                            <span style={{ fontSize: 11, color: isChecked ? 'var(--color-text-primary)' : 'var(--color-text-secondary)' }}>
+                                                Paso {tIndex} ({TRIGGER_LABELS[t.type] || t.type})
+                                            </span>
+                                        </label>
                                     )
                                 })}
-                            </select>
+                            </div>
                         </div>
                     )}
                 </div>
