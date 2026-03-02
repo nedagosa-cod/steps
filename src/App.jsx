@@ -50,7 +50,7 @@ export default function App() {
   const [isPreview, setIsPreview] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [isFocusMode, setIsFocusMode] = useState(false)
-  const [isEditingImage, setIsEditingImage] = useState(false)
+  const [isEditingImage, setIsEditingImage] = useState(null) // null or index
 
   const onConnect = useCallback(
     (params) => setEdges((eds) => addEdge({ ...params, ...edgeDefaults }, eds)),
@@ -114,6 +114,10 @@ export default function App() {
 
   const addScreenNode = useCallback(() => {
     const id = `node-${nodeCounter++}`
+
+    // Calculate if it's the first node being created when none exist
+    const isFirstNode = nodes.length === 0;
+
     const n = {
       id,
       type: 'screenNode',
@@ -121,12 +125,14 @@ export default function App() {
       data: {
         label: `Pantalla ${nodeCounter - 1}`,
         image: null,
+        mediaType: 'image', // 'image' or 'video'
+        isStartNode: isFirstNode,
         triggers: [], // multi-trigger array (empty = no advance)
       },
     }
     setNodes((nds) => [...nds, n])
     setSelectedNode(n)
-  }, [setNodes])
+  }, [nodes, setNodes])
 
   const deleteSelectedNode = useCallback(() => {
     if (!selectedNode) return
@@ -139,9 +145,17 @@ export default function App() {
   }, [selectedNode, setNodes, setEdges])
 
   const onUpdateNode = useCallback((id, patch) => {
-    setNodes((nds) =>
-      nds.map((n) => n.id === id ? { ...n, data: { ...n.data, ...patch } } : n)
-    )
+    setNodes((nds) => {
+      // If setting a new start node, clear the old one
+      if (patch.isStartNode === true) {
+        return nds.map((n) =>
+          n.id === id
+            ? { ...n, data: { ...n.data, ...patch } }
+            : { ...n, data: { ...n.data, isStartNode: false } }
+        )
+      }
+      return nds.map((n) => n.id === id ? { ...n, data: { ...n.data, ...patch } } : n)
+    })
     setSelectedNode((prev) =>
       prev?.id === id ? { ...prev, data: { ...prev.data, ...patch } } : prev
     )
@@ -187,14 +201,24 @@ export default function App() {
         <PreviewMode nodes={nodes} edges={edges} onExit={() => setIsPreview(false)} />
       )}
 
-      {isEditingImage && selectedNode?.data?.image && (
+      {isEditingImage !== null && selectedNode?.data?.image && (
         <ImageEditor
-          imageUrl={selectedNode.data.image}
+          imageUrl={
+            Array.isArray(selectedNode.data.image)
+              ? selectedNode.data.image[isEditingImage]
+              : selectedNode.data.image
+          }
           onSave={(newImageStr) => {
-            onUpdateNode(selectedNode.id, { image: newImageStr })
-            setIsEditingImage(false)
+            if (Array.isArray(selectedNode.data.image)) {
+              const newArr = [...selectedNode.data.image]
+              newArr[isEditingImage] = newImageStr
+              onUpdateNode(selectedNode.id, { image: newArr })
+            } else {
+              onUpdateNode(selectedNode.id, { image: newImageStr })
+            }
+            setIsEditingImage(null)
           }}
-          onCancel={() => setIsEditingImage(false)}
+          onCancel={() => setIsEditingImage(null)}
         />
       )}
 
@@ -357,7 +381,7 @@ export default function App() {
             node={selectedNode}
             onUpdateNode={onUpdateNode}
             nodes={nodes}
-            onEditImage={() => setIsEditingImage(true)}
+            onEditImage={(idx) => setIsEditingImage(idx)}
           />
         </div>
       </aside>

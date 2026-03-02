@@ -532,7 +532,12 @@
 
             // Compute node order linearly following edges
             let order = [];
-            let cursor = (nodes.find(n => !edges.some(e => e.target === n.id)) || nodes[0]).id;
+            let startNode = nodes.find(n => n.data?.isStartNode === true);
+            if (!startNode) {
+                // Fallback to nodes with no incoming edges or first node
+                startNode = nodes.find(n => !edges.some(e => e.target === n.id)) || nodes[0];
+            }
+            let cursor = startNode.id;
             const visited = new Set();
             while (cursor && !visited.has(cursor)) {
                 order.push(cursor);
@@ -672,13 +677,50 @@
 
                 // Image / Canvas
                 let canvasHtml = "";
+
+                // Force the container to be a scrolling column
+                elImageWrapper.style.display = 'flex';
+                elImageWrapper.style.flexDirection = 'column';
+                elImageWrapper.style.overflowY = 'auto';
+                elImageWrapper.style.overflowX = 'hidden';
+                elImageWrapper.style.width = '100vw';
+                elImageWrapper.style.height = '100dvh';
+
                 if (data.image) {
-                    canvasHtml += `<img src="${data.image}" class="scene-image" draggable="false" />`;
+                    if (data.mediaType === 'video') {
+                        const videoSrc = Array.isArray(data.image) ? data.image[0] : data.image;
+                        canvasHtml += `<video src="${videoSrc}" class="scene-image" autoplay playsinline style="object-fit: cover; width: 100vw; height: 100dvh; display: block; flex-shrink: 0;"></video>`;
+                    } else {
+                        const imgArray = Array.isArray(data.image) ? data.image : [data.image];
+                        const imgElements = imgArray.map(src => `<img src="${src}" class="scene-image" draggable="false" style="width: 100%; height: auto; display: block;" />`).join("");
+
+                        // We wrap the images and triggers in a relatively positioned container 
+                        // that matches its content's width/height naturally
+                        canvasHtml += `
+                            <div style="position: relative; width: 100%;">
+                                <div style="display: flex; flex-direction: column; width: 100%;">
+                                    ${imgElements}
+                                </div>
+                                <div id="ui-triggers-container" style="position: absolute; inset: 0; pointer-events: none;"></div>
+                            </div>
+                        `;
+                    }
                 } else {
-                    canvasHtml += `<span class="no-image-text">Sin imagen en este nodo</span>`;
+                    canvasHtml += `<div style="display: flex; align-items: center; justify-content: center; width: 100vw; height: 100dvh;"><span class="no-image-text">Sin imagen (o video) en este nodo</span></div>`;
                 }
 
                 elImageWrapper.innerHTML = canvasHtml;
+
+                // Handle video auto-advance
+                if (data.mediaType === 'video') {
+                    const videoEl = elImageWrapper.querySelector('video');
+                    if (videoEl) {
+                        videoEl.onended = () => {
+                            const nextId = getNextNodeId();
+                            if (nextId) navigate(nextId);
+                        };
+                    }
+                }
 
                 // Triggers
                 triggers.forEach(t => {
@@ -1022,8 +1064,27 @@
                         } else if (!t.hidden) {
                             el.innerHTML = `<span style="font-size:clamp(10px, 1vw, 14px);font-weight:700;color:var(--color-trigger-keypress-border);background:rgba(10,13,18,0.5);padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:0.05em">${t.keyCode || '?'}</span>`;
                         }
+                    } else if (t.type === 'scroll_area') {
+                        el.style.border = t.hidden ? 'none' : '1px dashed #10b981';
+                        el.style.pointerEvents = isBlocked ? 'none' : 'auto';
+                        el.style.overflowY = 'auto';
+                        el.style.overflowX = 'hidden';
+                        el.style.background = 'transparent';
+
+                        if (t.contentImage) {
+                            el.innerHTML = `<img src="${t.contentImage}" alt="Contenido scroll" style="width: 100%; height: auto; display: block;" draggable="false" />`;
+                        } else if (!t.hidden) {
+                            el.innerHTML = `<div style="padding: 10px; text-align: center; color: #10b981; font-size: 11px; background: rgba(10,13,18,0.8); min-height: 100%;">[Área de Scroll sin imagen]</div>`;
+                        }
                     }
-                    elImageWrapper.appendChild(el);
+
+                    // Find where to append the trigger
+                    // If it's an image stack, we created #ui-triggers-container so % coords work against total height
+                    const triggerParent = (data.image && data.mediaType !== 'video')
+                        ? elImageWrapper.querySelector('#ui-triggers-container')
+                        : elImageWrapper;
+
+                    triggerParent.appendChild(el);
                 });
 
                 // Progress Badges

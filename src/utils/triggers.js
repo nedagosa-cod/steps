@@ -88,6 +88,13 @@ export const TRIGGER_COLORS = {
         bgActive: 'rgba(214,51,132,0.28)',
         label: '#d63384',
     },
+    scroll_area: {
+        border: 'rgba(16,185,129,0.65)',
+        bg: 'rgba(16,185,129,0.10)',
+        borderActive: 'rgba(16,185,129,0.9)',
+        bgActive: 'rgba(16,185,129,0.28)',
+        label: '#10b981',
+    },
 }
 
-export const TRIGGER_LABELS = { click: 'Click', double_click: 'Doble Clic', input: 'Input', keypress: 'Tecla', dropdown: 'Lista', dependent_dropdown: 'Lista Dep.' }
+export const TRIGGER_LABELS = { click: 'Click', double_click: 'Doble Clic', input: 'Input', keypress: 'Tecla', dropdown: 'Lista', dependent_dropdown: 'Lista Dep.', scroll_area: 'Área Scroll' }

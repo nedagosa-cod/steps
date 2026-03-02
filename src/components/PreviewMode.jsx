@@ -409,12 +409,44 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
             )
         }
 
+        if (trigger.type === 'scroll_area') {
+            return (
+                <div
+                    key={trigger.id}
+                    style={{
+                        position: 'absolute',
+                        left: `${hs.x}%`, top: `${hs.y}%`,
+                        width: `${hs.w}%`, height: `${hs.h}%`,
+                        border: trigger.hidden ? 'none' : `1px dashed ${colors.border}`,
+                        overflowY: 'auto', overflowX: 'hidden',
+                        display: 'block',
+                        opacity: isBlocked ? 0.35 : 1,
+                        pointerEvents: isBlocked ? 'none' : 'auto',
+                        // Optional: styling the scrollbar nicely if needed, but default is fine
+                        background: 'transparent'
+                    }}
+                >
+                    {trigger.contentImage ? (
+                        <img src={trigger.contentImage} alt="Contenido scroll" style={{ width: '100%', height: 'auto', display: 'block' }} draggable={false} />
+                    ) : (
+                        !trigger.hidden && (
+                            <div style={{ padding: 10, textAlign: 'center', color: colors.label, fontSize: 11, background: 'rgba(10,13,18,0.8)', minHeight: '100%' }}>
+                                [Área de Scroll sin imagen]
+                            </div>
+                        )
+                    )}
+                </div>
+            )
+        }
+
         return null
     })
 }
 
 export default function PreviewMode({ nodes, edges, onExit }) {
-    const startNode = nodes.find(n => !edges.some(e => e.target === n.id)) || nodes[0]
+    const startNode = nodes.find(n => n.data?.isStartNode === true)
+        || nodes.find(n => !edges.some(e => e.target === n.id))
+        || nodes[0]
     const [currentNodeId, setCurrentNodeId] = useState(startNode?.id)
     // Parallel model: Set of completed trigger IDs (any order)
     const [completedTriggers, setCompletedTriggers] = useState(new Set())
@@ -433,7 +465,10 @@ export default function PreviewMode({ nodes, edges, onExit }) {
     // Compute linear node order following edges
     const nodeOrder = (() => {
         const order = []
-        let cursor = nodes.find(n => !edges.some(e => e.target === n.id))?.id
+        const initialNode = nodes.find(n => n.data?.isStartNode === true)
+            || nodes.find(n => !edges.some(e => e.target === n.id))
+            || nodes[0]
+        let cursor = initialNode?.id
         const visited = new Set()
         while (cursor && !visited.has(cursor)) {
             order.push(cursor)
@@ -728,16 +763,39 @@ export default function PreviewMode({ nodes, edges, onExit }) {
             {/* ── Main image container ── */}
             <div style={{
                 position: 'fixed', inset: 0, zIndex: -1,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: '#0a0d12',
+                display: 'flex', flexDirection: 'column', // align to top for scrolling
+                backgroundColor: '#0a0d12',
+                overflowY: 'auto', // enable scrolling
+                overflowX: 'hidden',
                 transition: 'opacity 280ms ease-out, transform 280ms ease-out, filter 280ms ease-out',
                 opacity: transitioning ? 0 : 1,
                 transform: transitioning ? 'scale(0.98)' : 'scale(1)',
                 filter: transitioning ? 'blur(3px)' : 'blur(0)',
             }}>
                 {data.image ? (
-                    <div ref={imgWrapperRef} style={{ position: 'relative', maxWidth: '100%', maxHeight: '100dvh', display: 'inline-block' }}>
-                        <img src={data.image} alt="screen" draggable={false} style={{ maxWidth: '100%', maxHeight: '100dvh', display: 'block' }} />
+                    <div ref={imgWrapperRef} style={{ position: 'relative', width: '100%', minHeight: '100dvh', margin: '0 auto' }}>
+                        {data.mediaType === 'video' ? (
+                            <video
+                                src={Array.isArray(data.image) ? data.image[0] : data.image}
+                                autoPlay
+                                playsInline
+                                onEnded={() => {
+                                    const nextId = getNextNodeId()
+                                    if (nextId) navigate(nextId)
+                                    else setSuccess(true)
+                                }}
+                                style={{
+                                    width: '100vw', height: '100dvh', display: 'block',
+                                    objectFit: 'cover'
+                                }}
+                            />
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                                {(Array.isArray(data.image) ? data.image : [data.image]).map((src, idx) => (
+                                    <img key={idx} src={src} alt={`screen-${idx}`} draggable={false} style={{ width: '100vw', height: 'auto', display: 'block' }} />
+                                ))}
+                            </div>
+                        )}
                         {renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
                     </div>
                 ) : (

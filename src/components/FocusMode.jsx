@@ -170,10 +170,22 @@ export default function FocusMode({ node, onExit, onUpdateNode }) {
             }}>
                 {data.image ? (
                     <div ref={containerRef} style={{ position: 'relative', maxWidth: '100%', maxHeight: '100%', display: 'inline-block', boxShadow: '0 20px 80px rgba(0,0,0,0.6)' }}>
-                        <img
-                            src={data.image} alt="Enfoque de pantalla" draggable={false}
-                            style={{ maxWidth: '100%', maxHeight: 'calc(100vh - 120px)', display: 'block', borderRadius: 2 }}
-                        />
+                        {data.mediaType === 'video' ? (
+                            <video
+                                src={Array.isArray(data.image) ? data.image[0] : data.image}
+                                autoPlay muted loop playsInline
+                                style={{ maxWidth: '100%', maxHeight: 'calc(100vh - 120px)', display: 'block', borderRadius: 2 }}
+                            />
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', width: 'auto', maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}>
+                                {(Array.isArray(data.image) ? data.image : [data.image]).map((src, idx) => (
+                                    <img
+                                        key={idx} src={src} alt={`Enfoque de pantalla ${idx}`} draggable={false}
+                                        style={{ maxWidth: '100%', height: 'auto', display: 'block', borderRadius: 2 }}
+                                    />
+                                ))}
+                            </div>
+                        )}
                         {triggers.map((t, i) => (
                             <InteractiveTrigger
                                 key={t.id}

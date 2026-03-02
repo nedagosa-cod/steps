@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react'
-import { Upload, MousePointer, Keyboard, Info, Image, Trash2, GripVertical, ChevronDown, ChevronUp, TextCursorInput, List, ListTree } from 'lucide-react'
+import { Upload, MousePointer, Keyboard, Info, Image, Video, Trash2, GripVertical, ChevronDown, ChevronUp, TextCursorInput, List, ListTree, Plus } from 'lucide-react'
 import { normalizeTriggers, makeDefaultTrigger, TRIGGER_COLORS, TRIGGER_LABELS } from '../utils/triggers'
 
 /* ── Atoms ── */
@@ -141,9 +141,10 @@ function TriggerCard({
                         { value: 'input', icon: TextCursorInput, label: 'Input' },
                         { value: 'dropdown', icon: List, label: 'Lista' },
                         { value: 'dependent_dropdown', icon: ListTree, label: 'Lista Doble' },
+                        { value: 'scroll_area', icon: GripVertical, label: 'Área Scroll' },
                     ].map(({ value, icon: Icon, label }) => {
                         const active = trigger.type === value
-                        const c = TRIGGER_COLORS[value]
+                        const c = TRIGGER_COLORS[value] || TRIGGER_COLORS.click
                         return (
                             <button
                                 key={value}
@@ -272,6 +273,75 @@ function TriggerCard({
                                     }}
                                 />
                             </div>
+                        </div>
+                    )}
+
+                    {trigger.type === 'scroll_area' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+                            <FieldLabel>Imagen de Contenido (Scrollable)</FieldLabel>
+                            {trigger.contentImage ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    <div style={{
+                                        position: 'relative', width: '100%', height: 80,
+                                        background: 'var(--color-bg)', border: '1px solid var(--color-border)',
+                                        borderRadius: 6, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                    }}>
+                                        <img src={trigger.contentImage} alt="Contenido scroll" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                        <button
+                                            onClick={() => onUpdate({ contentImage: null })}
+                                            style={{
+                                                position: 'absolute', top: 4, right: 4, width: 20, height: 20,
+                                                background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 4, color: '#fff',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                                            }}
+                                            title="Eliminar imagen"
+                                        >
+                                            <Trash2 size={12} />
+                                        </button>
+                                    </div>
+                                    <span style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>
+                                        Esta imagen se mostrará dentro del área y permitirá hacer scroll verticalmente durante la simulación.
+                                    </span>
+                                </div>
+                            ) : (
+                                <div>
+                                    <input
+                                        type="file" accept="image/*"
+                                        id={`upload-scroll-${trigger.id}`}
+                                        style={{ display: 'none' }}
+                                        onChange={(e) => {
+                                            const file = e.target.files[0]
+                                            if (file) {
+                                                const reader = new FileReader()
+                                                reader.onload = (ev) => onUpdate({ contentImage: ev.target.result })
+                                                reader.readAsDataURL(file)
+                                            }
+                                        }}
+                                    />
+                                    <label
+                                        htmlFor={`upload-scroll-${trigger.id}`}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                            width: '100%', padding: '10px', background: 'var(--color-control)',
+                                            border: '1px dashed var(--color-border-strong)', borderRadius: 6,
+                                            color: 'var(--color-text-secondary)', fontSize: 11, fontWeight: 500, cursor: 'pointer',
+                                            transition: 'all 150ms'
+                                        }}
+                                        onMouseEnter={e => {
+                                            e.currentTarget.style.borderColor = colors.label
+                                            e.currentTarget.style.color = 'var(--color-text-primary)'
+                                            e.currentTarget.style.background = `rgba(${colors.bg.match(/[0-9.]+/g).slice(0, 3).join(',')}, 0.05)`
+                                        }}
+                                        onMouseLeave={e => {
+                                            e.currentTarget.style.borderColor = 'var(--color-border-strong)'
+                                            e.currentTarget.style.color = 'var(--color-text-secondary)'
+                                            e.currentTarget.style.background = 'var(--color-control)'
+                                        }}
+                                    >
+                                        <Upload size={14} /> Subir imagen larga
+                                    </label>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -449,24 +519,26 @@ function TriggerCard({
                     })()}
 
                     {/* Advanced Settings Toggle */}
-                    <div
-                        onClick={() => setShowAdvanced(!showAdvanced)}
-                        style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                            padding: '6px 0', marginTop: 4, cursor: 'pointer',
-                            color: 'var(--color-text-tertiary)',
-                            transition: 'color 150ms'
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.color = 'var(--color-text-primary)'}
-                        onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-tertiary)'}
-                    >
-                        <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                            {showAdvanced ? 'Ocultar ajustes avanzados' : 'Mostrar ajustes avanzados'}
-                        </span>
-                        {showAdvanced ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                    </div>
+                    {trigger.type !== 'scroll_area' && (
+                        <div
+                            onClick={() => setShowAdvanced(!showAdvanced)}
+                            style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                padding: '6px 0', marginTop: 4, cursor: 'pointer',
+                                color: 'var(--color-text-tertiary)',
+                                transition: 'color 150ms'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.color = 'var(--color-text-primary)'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-tertiary)'}
+                        >
+                            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                                {showAdvanced ? 'Ocultar ajustes avanzados' : 'Mostrar ajustes avanzados'}
+                            </span>
+                            {showAdvanced ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                        </div>
+                    )}
 
-                    {showAdvanced && (
+                    {showAdvanced && trigger.type !== 'scroll_area' && (
                         <div style={{
                             display: 'flex', flexDirection: 'column', gap: 10,
                             paddingTop: 8, paddingBottom: 4, borderTop: '1px solid var(--color-border-subtle)'
@@ -592,7 +664,7 @@ function TriggerCard({
                     )}
 
                     {/* Multiple Dependencies */}
-                    {allTriggers.length > 1 && (
+                    {allTriggers.length > 1 && trigger.type !== 'scroll_area' && (
                         <div style={{ marginTop: 8 }}>
                             <FieldLabel>Depende de (Opcional)</FieldLabel>
                             <p style={{ fontSize: 10, color: 'var(--color-text-muted)', marginBottom: 6, lineHeight: 1.2 }}>
@@ -685,19 +757,73 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage
     const addTrigger = (type) =>
         setTriggers([...triggers, makeDefaultTrigger(type)])
 
-    const handleImageUpload = (e) => {
+    const handleMediaUpload = (e) => {
         const file = e.target.files?.[0]
         if (!file) return
+        const isVideo = file.type.startsWith('video/')
         const reader = new FileReader()
-        reader.onload = ev => update({ image: ev.target.result })
+        reader.onload = ev => {
+            if (isVideo) {
+                // Video replaces entirely
+                update({ image: ev.target.result, mediaType: 'video' })
+            } else {
+                // Image allows stacking
+                let currentImages = data.image ? (Array.isArray(data.image) ? data.image : [data.image]) : []
+                // If it was a video before, we overwrite it
+                if (data.mediaType === 'video') currentImages = []
+
+                const newImages = [...currentImages, ev.target.result]
+                update({ image: newImages, mediaType: 'image' })
+            }
+            // Reset input so the same file can be uploaded again if needed
+            if (fileInputRef.current) fileInputRef.current.value = ''
+        }
         reader.readAsDataURL(file)
     }
+
+    const removeImageSegment = (indexToRemove) => {
+        if (!Array.isArray(data.image)) {
+            update({ image: null })
+            return
+        }
+        const newImages = data.image.filter((_, idx) => idx !== indexToRemove)
+        update({ image: newImages.length > 0 ? newImages : null })
+    }
+
+    // Helper to get array of images
+    const imageSegments = data.image ? (Array.isArray(data.image) ? data.image : [data.image]) : []
 
     return (
         <div style={{
             display: 'flex', flexDirection: 'column', gap: 12,
             padding: 14, height: '100%', overflowY: 'auto',
         }}>
+            {/* Set as Start Node */}
+            <button
+                onClick={() => update({ isStartNode: true })}
+                disabled={data.isStartNode}
+                style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    width: '100%', padding: '8px 12px', borderRadius: 7,
+                    border: data.isStartNode ? '1px solid rgba(46, 165, 103, 0.4)' : '1px solid var(--color-border)',
+                    background: data.isStartNode ? 'rgba(46, 165, 103, 0.15)' : 'transparent',
+                    color: data.isStartNode ? '#5ac98a' : 'var(--color-text-secondary)',
+                    fontSize: 11, fontWeight: data.isStartNode ? 700 : 500,
+                    cursor: data.isStartNode ? 'default' : 'pointer',
+                    transition: 'all 150ms ease-out',
+                }}
+            >
+                <div style={{
+                    width: 14, height: 14, borderRadius: '50%',
+                    background: data.isStartNode ? '#5ac98a' : 'transparent',
+                    border: data.isStartNode ? 'none' : '1px solid var(--color-border-strong)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                    {data.isStartNode && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
+                </div>
+                {data.isStartNode ? 'Pantalla Inicial' : 'Establecer como inicial'}
+            </button>
+
             {/* Name */}
             <div>
                 <FieldLabel>Nombre</FieldLabel>
@@ -708,50 +834,112 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage
                 />
             </div>
 
-            <Divider label="Imagen" />
+            <Divider label="Fondo (Imagen / Video)" />
 
-            {/* Image upload */}
-            <input ref={fileInputRef} type="file" accept="image/*"
-                style={{ display: 'none' }} onChange={handleImageUpload} />
+            {/* Media upload */}
+            <input ref={fileInputRef} type="file" accept="image/*,video/mp4,video/webm"
+                style={{ display: 'none' }} onChange={handleMediaUpload} />
 
             {data.image ? (
-                <div style={{ position: 'relative' }}>
-                    <button
-                        onClick={() => fileInputRef.current?.click()}
-                        style={{
-                            position: 'relative', borderRadius: 7, overflow: 'hidden',
-                            border: '1px solid var(--color-border)', cursor: 'pointer',
-                            display: 'block', width: '100%', background: '#000', padding: 0,
-                        }}
-                    >
-                        <img src={data.image} alt="preview" style={{ width: '100%', height: 160, objectFit: 'contain', display: 'block' }} />
-                        <div
-                            style={{
-                                position: 'absolute', inset: 0, background: 'rgba(10,13,18,0.65)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                                opacity: 0, transition: 'opacity 150ms ease-out',
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.opacity = 1}
-                            onMouseLeave={e => e.currentTarget.style.opacity = 0}
-                        >
-                            <Image size={14} style={{ color: '#e2eaf4' }} />
-                            <span style={{ fontSize: 11, fontWeight: 500, color: '#e2eaf4' }}>Cambiar</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {/* Render Video or Stacked Images */}
+                    {data.mediaType === 'video' ? (
+                        <div style={{ position: 'relative' }}>
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                style={{
+                                    position: 'relative', borderRadius: 7, overflow: 'hidden',
+                                    border: '1px solid var(--color-border)', cursor: 'pointer',
+                                    display: 'block', width: '100%', background: '#000', padding: 0,
+                                }}
+                            >
+                                <video src={Array.isArray(data.image) ? data.image[0] : data.image} style={{ width: '100%', height: 160, objectFit: 'contain', display: 'block' }} muted loop onMouseOver={e => e.target.play()} onMouseOut={e => e.target.pause()} />
+                                <div
+                                    style={{
+                                        position: 'absolute', inset: 0, background: 'rgba(10,13,18,0.65)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                        opacity: 0, transition: 'opacity 150ms ease-out',
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                                    onMouseLeave={e => e.currentTarget.style.opacity = 0}
+                                >
+                                    <Video size={14} style={{ color: '#e2eaf4' }} />
+                                    <span style={{ fontSize: 11, fontWeight: 500, color: '#e2eaf4' }}>Cambiar Video</span>
+                                </div>
+                            </button>
                         </div>
-                    </button>
-                    <button
-                        onClick={onEditImage}
-                        style={{
-                            position: 'absolute', top: 8, right: 8,
-                            background: 'var(--color-brand)', border: 'none',
-                            borderRadius: 4, padding: '4px 8px',
-                            display: 'flex', alignItems: 'center', gap: 6,
-                            color: 'white', fontSize: 11, fontWeight: 600,
-                            cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-                            zIndex: 2
-                        }}
-                    >
-                        ✏️ Editar
-                    </button>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {/* Stacked Images List */}
+                            {imageSegments.map((src, idx) => (
+                                <div key={idx} style={{ position: 'relative', borderRadius: 7, overflow: 'hidden', border: '1px solid var(--color-border)', background: '#000' }}>
+                                    <img src={src} alt={`segment-${idx}`} style={{ width: '100%', height: imageSegments.length > 1 ? 100 : 160, objectFit: 'cover', display: 'block', opacity: 0.8 }} />
+
+                                    {/* Edit Button */}
+                                    <button
+                                        onClick={() => onEditImage(idx)}
+                                        style={{
+                                            position: 'absolute', top: 8, left: 8,
+                                            background: 'var(--color-brand)', border: 'none',
+                                            borderRadius: 4, padding: '4px 8px',
+                                            display: 'flex', alignItems: 'center', gap: 6,
+                                            color: 'white', fontSize: 11, fontWeight: 600,
+                                            cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                                            zIndex: 2
+                                        }}
+                                    >
+                                        ✏️ Editar {imageSegments.length > 1 ? `Tramo ${idx + 1}` : ''}
+                                    </button>
+
+                                    {/* Delete Button */}
+                                    <button
+                                        onClick={() => removeImageSegment(idx)}
+                                        style={{
+                                            position: 'absolute', top: 8, right: 8,
+                                            background: 'rgba(239, 68, 68, 0.9)', border: 'none',
+                                            borderRadius: 4, padding: '4px',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            color: 'white', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                                            zIndex: 2
+                                        }}
+                                        title="Eliminar este tramo"
+                                    >
+                                        <Trash2 size={12} />
+                                    </button>
+
+                                    <div style={{
+                                        position: 'absolute', bottom: 6, right: 8,
+                                        background: 'rgba(0,0,0,0.7)', padding: '2px 6px', borderRadius: 4,
+                                        fontSize: 10, color: '#fff', fontWeight: 600
+                                    }}>
+                                        Tramo {idx + 1}
+                                    </div>
+                                </div>
+                            ))}
+
+                            {/* Add Image Below Button */}
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                style={{
+                                    width: '100%', height: 42, border: '1px dashed var(--color-border)',
+                                    borderRadius: 7, background: 'var(--color-surface)', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                    transition: 'all 150ms ease-out', marginTop: 4,
+                                }}
+                                onMouseEnter={e => {
+                                    e.currentTarget.style.borderColor = 'var(--color-border-strong)'
+                                    e.currentTarget.style.background = 'var(--color-raised)'
+                                }}
+                                onMouseLeave={e => {
+                                    e.currentTarget.style.borderColor = 'var(--color-border)'
+                                    e.currentTarget.style.background = 'var(--color-surface)'
+                                }}
+                            >
+                                <Plus size={14} style={{ color: 'var(--color-text-secondary)' }} />
+                                <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontWeight: 500 }}>Añadir imagen debajo</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
             ) : (
                 <button
@@ -772,7 +960,7 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage
                     }}
                 >
                     <Upload size={16} style={{ color: 'var(--color-text-muted)' }} />
-                    <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Subir imagen</span>
+                    <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Subir imagen o video</span>
                 </button>
             )}
 
@@ -873,6 +1061,7 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage
                     <AddBtn onClick={() => addTrigger('input')} icon={TextCursorInput} label="+ Input" color={TRIGGER_COLORS.input.label} />
                     <AddBtn onClick={() => addTrigger('dropdown')} icon={List} label="+ Lista" color={TRIGGER_COLORS.dropdown.label} />
                     <AddBtn onClick={() => addTrigger('dependent_dropdown')} icon={ListTree} label="+ Lista Doble" color={TRIGGER_COLORS.dependent_dropdown.label} />
+                    <AddBtn onClick={() => addTrigger('scroll_area')} icon={GripVertical} label="+ Área Scroll" color={TRIGGER_COLORS.scroll_area.label} />
                 </div>
             </div>
         </div>
