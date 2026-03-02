@@ -17,7 +17,7 @@ import PreviewMode from './components/PreviewMode'
 import FocusMode from './components/FocusMode'
 import ImageEditor from './components/ImageEditor'
 
-import { GitBranch, Plus, Play, Settings2, Trash2, Layers, Download, Maximize2 } from 'lucide-react'
+import { GitBranch, Plus, Play, Settings2, Trash2, Layers, Download, Maximize2, Save, Upload } from 'lucide-react'
 import { exportSimulator } from './utils/exporter'
 import { TRIGGER_COLORS } from './utils/triggers'
 
@@ -32,6 +32,15 @@ const edgeDefaults = {
 }
 
 let nodeCounter = 1
+
+function updateNodeCounter(nodesData) {
+  let highest = 0
+  nodesData.forEach(n => {
+    const num = parseInt(n.id.replace('node-', ''))
+    if (!isNaN(num) && num > highest) highest = num
+  })
+  nodeCounter = highest + 1
+}
 
 // ── App ──────────────────────────────────────────────────────────
 export default function App() {
@@ -54,6 +63,51 @@ export default function App() {
     await exportSimulator(nodes, edges)
     setIsExporting(false)
   }, [nodes, edges])
+
+  const handleSaveProject = useCallback(() => {
+    const projectData = {
+      nodes,
+      edges
+    }
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(projectData, null, 2))
+    const downloadAnchorNode = document.createElement('a')
+    downloadAnchorNode.setAttribute("href", dataStr)
+    downloadAnchorNode.setAttribute("download", "proyecto_simulador.json")
+    document.body.appendChild(downloadAnchorNode)
+    downloadAnchorNode.click()
+    downloadAnchorNode.remove()
+  }, [nodes, edges])
+
+  const handleLoadProject = useCallback(() => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.json'
+    input.onchange = e => {
+      const file = e.target.files[0]
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        try {
+          const projectData = JSON.parse(event.target.result)
+          if (projectData.nodes && projectData.edges) {
+            setNodes(projectData.nodes)
+            setEdges(projectData.edges)
+            updateNodeCounter(projectData.nodes)
+            setSelectedNode(null)
+            setIsFocusMode(false)
+            setIsEditingImage(false)
+          } else {
+            alert("El archivo no tiene el formato correcto (debe contener 'nodes' y 'edges').")
+          }
+        } catch (err) {
+          alert("Error al leer el archivo del proyecto.")
+          console.error(err)
+        }
+      }
+      reader.readAsText(file)
+    }
+    input.click()
+  }, [setNodes, setEdges])
 
   const onNodeClick = useCallback((_, node) => setSelectedNode(node), [])
   const onPaneClick = useCallback(() => setSelectedNode(null), [])
@@ -214,6 +268,16 @@ export default function App() {
             <GhostBtn onClick={addScreenNode}>
               <Plus size={12} style={{ marginRight: 5 }} />
               Nueva pantalla
+            </GhostBtn>
+
+            <GhostBtn onClick={handleLoadProject}>
+              <Upload size={12} style={{ marginRight: 5 }} />
+              Cargar
+            </GhostBtn>
+
+            <GhostBtn onClick={handleSaveProject} disabled={nodes.length === 0}>
+              <Save size={12} style={{ marginRight: 5 }} />
+              Guardar
             </GhostBtn>
 
             <GhostBtn onClick={handleExport} disabled={nodes.length === 0 || isExporting}>

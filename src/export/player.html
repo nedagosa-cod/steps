@@ -436,6 +436,23 @@
                                 <path d="M16 21v-3a2 2 0 0 1 2-2h3" />
                             </svg>
                         </button>
+
+                        <button id="ui-exit-btn" title="Cerrar simulación" style="
+                            display: flex; align-items: center; justify-content: center; gap: 4px;
+                            height: 26px; border-radius: 6px; padding: 0 8px;
+                            background: transparent; border: 1px solid rgba(255,255,255,0.1);
+                            color: var(--color-text-secondary); cursor: pointer; transition: all 150ms; font-size: 11px;
+                        " onclick="window.close(); if(!window.closed) { alert('No se pudo cerrar automáticamente. Por favor, cierra la pestaña manualmente.'); }"
+                            onmouseenter="this.style.background='rgba(255,255,255,0.1)'; this.style.color='var(--color-text-primary)'"
+                            onmouseleave="this.style.background='transparent'; this.style.color='var(--color-text-secondary)'">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M18 6 6 18" />
+                                <path d="m6 6 12 12" />
+                            </svg>
+                            Salir
+                        </button>
                     </div>
                     <div class="step-pills" id="ui-step-indicator">
                         <!-- Pills injected here -->
