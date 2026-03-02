@@ -77,7 +77,7 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
                 console.error("Error loading image in Fabric:", err)
             })
         } else {
-            c.backgroundColor = '#1a1d24'
+            c.backgroundColor = '#ffffff'
             c.renderAll()
             saveHistoryState(c)
         }
@@ -171,7 +171,7 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
                     saveHistoryState()
                 })
             } else {
-                fabricCanvas.backgroundColor = '#1a1d24'
+                fabricCanvas.backgroundColor = '#ffffff'
                 fabricCanvas.renderAll()
                 saveHistoryState()
             }
@@ -301,14 +301,16 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
     }, [activeTool, color, brushSize, fabricCanvas])
 
     const applyCrop = () => {
-        if (!fabricCanvas || !cropRectRef.current || !fabricCanvas.backgroundImage) return
-
         const cropRect = cropRectRef.current
+
+        // Hide the crop rectangle so it doesn't get baked into the export
+        cropRect.set({ visible: false })
+        fabricCanvas.renderAll()
 
         // We export the cropped area as a dataUrl, then reload it as the new background
         const dataUrl = fabricCanvas.toDataURL({
-            format: 'png',
-            quality: 1,
+            format: 'jpeg',
+            quality: 0.95,
             left: cropRect.left - (cropRect.width * cropRect.scaleX) / 2,
             top: cropRect.top - (cropRect.height * cropRect.scaleY) / 2,
             width: cropRect.width * cropRect.scaleX,

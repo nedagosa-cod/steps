@@ -16,8 +16,9 @@ import NodeConfigPanel from './components/NodeConfigPanel'
 import PreviewMode from './components/PreviewMode'
 import FocusMode from './components/FocusMode'
 import ImageEditor from './components/ImageEditor'
+import ScrollImageBuilder from './components/ScrollImageBuilder'
 
-import { GitBranch, Plus, Play, Settings2, Trash2, Layers, Download, Maximize2, Save, Upload } from 'lucide-react'
+import { GitBranch, Plus, Play, Settings2, Trash2, Layers, Download, Maximize2, Save, Upload, Image as ImageIcon } from 'lucide-react'
 import { exportSimulator } from './utils/exporter'
 import { TRIGGER_COLORS } from './utils/triggers'
 
@@ -51,6 +52,7 @@ export default function App() {
   const [isExporting, setIsExporting] = useState(false)
   const [isFocusMode, setIsFocusMode] = useState(false)
   const [isEditingImage, setIsEditingImage] = useState(null) // null or index
+  const [showImageBuilder, setShowImageBuilder] = useState(false)
 
   const onConnect = useCallback(
     (params) => setEdges((eds) => addEdge({ ...params, ...edgeDefaults }, eds)),
@@ -201,6 +203,10 @@ export default function App() {
         <PreviewMode nodes={nodes} edges={edges} onExit={() => setIsPreview(false)} />
       )}
 
+      {showImageBuilder && (
+        <ScrollImageBuilder onClose={() => setShowImageBuilder(false)} />
+      )}
+
       {isEditingImage !== null && selectedNode?.data?.image && (
         <ImageEditor
           imageUrl={
@@ -288,6 +294,11 @@ export default function App() {
                 Enfocar nodo
               </GhostBtn>
             )}
+
+            <GhostBtn onClick={() => setShowImageBuilder(true)}>
+              <ImageIcon size={12} style={{ marginRight: 5 }} />
+              Creador de Scroll
+            </GhostBtn>
 
             <GhostBtn onClick={addScreenNode}>
               <Plus size={12} style={{ marginRight: 5 }} />

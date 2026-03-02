@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react'
-import { Upload, MousePointer, Keyboard, Info, Image, Video, Trash2, GripVertical, ChevronDown, ChevronUp, TextCursorInput, List, ListTree, Plus } from 'lucide-react'
+import { Upload, MousePointer, Keyboard, Info, Image, Video, Trash2, GripVertical, ChevronDown, ChevronUp, TextCursorInput, List, ListTree, Plus, ImageIcon } from 'lucide-react'
 import { normalizeTriggers, makeDefaultTrigger, TRIGGER_COLORS, TRIGGER_LABELS } from '../utils/triggers'
 
 /* ── Atoms ── */
@@ -340,6 +340,28 @@ function TriggerCard({
                                     >
                                         <Upload size={14} /> Subir imagen larga
                                     </label>
+
+                                    <button
+                                        onClick={() => {
+                                            const savedImg = localStorage.getItem('simubuild_scroll_image');
+                                            if (savedImg) {
+                                                onUpdate({ contentImage: savedImg });
+                                            } else {
+                                                alert("No hay ninguna imagen guardada en el Creador de Scroll. Ábrelo desde el menú superior primero.");
+                                            }
+                                        }}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                            width: '100%', padding: '10px', background: 'var(--color-raised)',
+                                            border: '1px solid var(--color-border)', borderRadius: 6,
+                                            color: 'var(--color-text-primary)', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                                            transition: 'all 150ms', marginTop: 8
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.background = 'var(--color-control)'}
+                                        onMouseLeave={e => e.currentTarget.style.background = 'var(--color-raised)'}
+                                    >
+                                        <ImageIcon size={14} color="var(--color-brand)" /> Cargar desde Creador
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -519,26 +541,24 @@ function TriggerCard({
                     })()}
 
                     {/* Advanced Settings Toggle */}
-                    {trigger.type !== 'scroll_area' && (
-                        <div
-                            onClick={() => setShowAdvanced(!showAdvanced)}
-                            style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                                padding: '6px 0', marginTop: 4, cursor: 'pointer',
-                                color: 'var(--color-text-tertiary)',
-                                transition: 'color 150ms'
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.color = 'var(--color-text-primary)'}
-                            onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-tertiary)'}
-                        >
-                            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                                {showAdvanced ? 'Ocultar ajustes avanzados' : 'Mostrar ajustes avanzados'}
-                            </span>
-                            {showAdvanced ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                        </div>
-                    )}
+                    <div
+                        onClick={() => setShowAdvanced(!showAdvanced)}
+                        style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                            padding: '6px 0', marginTop: 4, cursor: 'pointer',
+                            color: 'var(--color-text-tertiary)',
+                            transition: 'color 150ms'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--color-text-primary)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-tertiary)'}
+                    >
+                        <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                            {showAdvanced ? 'Ocultar ajustes avanzados' : 'Mostrar ajustes avanzados'}
+                        </span>
+                        {showAdvanced ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </div>
 
-                    {showAdvanced && trigger.type !== 'scroll_area' && (
+                    {showAdvanced && (
                         <div style={{
                             display: 'flex', flexDirection: 'column', gap: 10,
                             paddingTop: 8, paddingBottom: 4, borderTop: '1px solid var(--color-border-subtle)'

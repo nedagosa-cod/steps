@@ -694,10 +694,10 @@
                         const imgArray = Array.isArray(data.image) ? data.image : [data.image];
                         const imgElements = imgArray.map(src => `<img src="${src}" class="scene-image" draggable="false" style="width: 100%; height: auto; display: block;" />`).join("");
 
-                        // We wrap the images and triggers in a relatively positioned container 
+                        // We wrap the images and triggers in a relatively positioned container
                         // that matches its content's width/height naturally
                         canvasHtml += `
-                            <div style="position: relative; width: 100%;">
+                            <div style="position: relative; width: 100%; max-width: 100%; margin: 0 auto;">
                                 <div style="display: flex; flex-direction: column; width: 100%;">
                                     ${imgElements}
                                 </div>

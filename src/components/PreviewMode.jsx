@@ -790,13 +790,18 @@ export default function PreviewMode({ nodes, edges, onExit }) {
                                 }}
                             />
                         ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                                {(Array.isArray(data.image) ? data.image : [data.image]).map((src, idx) => (
-                                    <img key={idx} src={src} alt={`screen-${idx}`} draggable={false} style={{ width: '100vw', height: 'auto', display: 'block' }} />
-                                ))}
+                            <div style={{ position: 'relative', width: '100%', maxWidth: '100%', margin: '0 auto' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                                    {(Array.isArray(data.image) ? data.image : [data.image]).map((src, idx) => (
+                                        <img key={idx} src={src} alt={`screen-${idx}`} draggable={false} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                                    ))}
+                                </div>
+                                <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                                    {renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
+                                </div>
                             </div>
                         )}
-                        {renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
+                        {data.mediaType === 'video' && renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
                     </div>
                 ) : (
                     <div ref={imgWrapperRef} style={{ position: 'relative', width: '100vw', height: '100dvh', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

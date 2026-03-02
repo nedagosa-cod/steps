@@ -75,7 +75,7 @@ const ScreenNode = memo(({ id, data, selected }) => {
             </div>
 
             {/* ── Image area with trigger overlays ── */}
-            <div style={{ position: 'relative', width: '100%', background: 'var(--color-canvas)' }}>
+            <div style={{ position: 'relative', width: '100%', background: 'var(--color-canvas)', display: 'flex', flexDirection: 'column' }}>
                 {/* Background: image or placeholder */}
                 {image ? (
                     mediaType === 'video' ? (
@@ -105,35 +105,37 @@ const ScreenNode = memo(({ id, data, selected }) => {
                     </div>
                 )}
                 {/* Trigger overlays — always rendered on top, regardless of image */}
-                {triggers.map((t, i) => {
-                    const hs = t.hotspot || { x: 40, y: 40, w: 20, h: 10 }
-                    const colors = TRIGGER_COLORS[t.type] || TRIGGER_COLORS.click
-                    return (
-                        <div
-                            key={t.id}
-                            style={{
-                                position: 'absolute',
-                                left: `${hs.x}%`, top: `${hs.y}%`,
-                                width: `${hs.w}%`, height: `${hs.h}%`,
-                                border: `1.5px dashed ${colors.border}`,
-                                background: colors.bg,
-                                borderRadius: 3,
-                                pointerEvents: 'none',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                            }}
-                        >
-                            <span style={{
-                                fontSize: 8, fontWeight: 700, color: colors.label,
-                                background: 'rgba(10,13,18,0.7)',
-                                borderRadius: 3, padding: '1px 4px', lineHeight: 1.2,
-                            }}>
-                                {i + 1}
-                            </span>
-                        </div>
-                    )
-                })}
+                <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                    {triggers.map((t, i) => {
+                        const hs = t.hotspot || { x: 40, y: 40, w: 20, h: 10 }
+                        const colors = TRIGGER_COLORS[t.type] || TRIGGER_COLORS.click
+                        return (
+                            <div
+                                key={t.id}
+                                style={{
+                                    position: 'absolute',
+                                    left: `${hs.x}%`, top: `${hs.y}%`,
+                                    width: `${hs.w}%`, height: `${hs.h}%`,
+                                    border: `1.5px dashed ${colors.border}`,
+                                    background: colors.bg,
+                                    borderRadius: 3,
+                                    pointerEvents: 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                }}
+                            >
+                                <span style={{
+                                    fontSize: 8, fontWeight: 700, color: colors.label,
+                                    background: 'rgba(10,13,18,0.7)',
+                                    borderRadius: 3, padding: '1px 4px', lineHeight: 1.2,
+                                }}>
+                                    {i + 1}
+                                </span>
+                            </div>
+                        )
+                    })}
+                </div>
             </div>
 
             {/* ── Trigger pills ── */}
