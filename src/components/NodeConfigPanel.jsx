@@ -646,7 +646,7 @@ function TriggerCard({
 }
 
 /* ── Main component ── */
-export default function NodeConfigPanel({ node, onUpdateNode, nodes }) {
+export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage }) {
     const fileInputRef = useRef(null)
     const [draggedIdx, setDraggedIdx] = useState(null)
     const [dragOverIdx, setDragOverIdx] = useState(null)
@@ -715,28 +715,44 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes }) {
                 style={{ display: 'none' }} onChange={handleImageUpload} />
 
             {data.image ? (
-                <button
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{
-                        position: 'relative', borderRadius: 7, overflow: 'hidden',
-                        border: '1px solid var(--color-border)', cursor: 'pointer',
-                        display: 'block', width: '100%', background: '#000', padding: 0,
-                    }}
-                >
-                    <img src={data.image} alt="preview" style={{ width: '100%', height: 160, objectFit: 'contain', display: 'block' }} />
-                    <div
+                <div style={{ position: 'relative' }}>
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
                         style={{
-                            position: 'absolute', inset: 0, background: 'rgba(10,13,18,0.65)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                            opacity: 0, transition: 'opacity 150ms ease-out',
+                            position: 'relative', borderRadius: 7, overflow: 'hidden',
+                            border: '1px solid var(--color-border)', cursor: 'pointer',
+                            display: 'block', width: '100%', background: '#000', padding: 0,
                         }}
-                        onMouseEnter={e => e.currentTarget.style.opacity = 1}
-                        onMouseLeave={e => e.currentTarget.style.opacity = 0}
                     >
-                        <Image size={14} style={{ color: '#e2eaf4' }} />
-                        <span style={{ fontSize: 11, fontWeight: 500, color: '#e2eaf4' }}>Cambiar</span>
-                    </div>
-                </button>
+                        <img src={data.image} alt="preview" style={{ width: '100%', height: 160, objectFit: 'contain', display: 'block' }} />
+                        <div
+                            style={{
+                                position: 'absolute', inset: 0, background: 'rgba(10,13,18,0.65)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                opacity: 0, transition: 'opacity 150ms ease-out',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                            onMouseLeave={e => e.currentTarget.style.opacity = 0}
+                        >
+                            <Image size={14} style={{ color: '#e2eaf4' }} />
+                            <span style={{ fontSize: 11, fontWeight: 500, color: '#e2eaf4' }}>Cambiar</span>
+                        </div>
+                    </button>
+                    <button
+                        onClick={onEditImage}
+                        style={{
+                            position: 'absolute', top: 8, right: 8,
+                            background: 'var(--color-brand)', border: 'none',
+                            borderRadius: 4, padding: '4px 8px',
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            color: 'white', fontSize: 11, fontWeight: 600,
+                            cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                            zIndex: 2
+                        }}
+                    >
+                        ✏️ Editar
+                    </button>
+                </div>
             ) : (
                 <button
                     onClick={() => fileInputRef.current?.click()}

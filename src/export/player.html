@@ -261,6 +261,11 @@
             pointer-events: none;
         }
 
+        .trigger-dropdown.done,
+        .trigger-dependent_dropdown.done {
+            pointer-events: auto;
+        }
+
         .trigger.blocked {
             opacity: 0.35;
             cursor: default;
@@ -614,6 +619,13 @@
             const handleTriggerComplete = (tId, triggers) => {
                 completedTriggers.add(tId);
                 render(); // Re-render state to update badges/blocked states
+
+                // Check for explicit navigation branching
+                const completedTrigger = triggers.find(t => t.id === tId);
+                if (completedTrigger && completedTrigger.navigateTarget) {
+                    setTimeout(() => navigate(completedTrigger.navigateTarget), 350);
+                    return;
+                }
 
                 const allDone = triggers.every(t => completedTriggers.has(t.id));
                 if (allDone) {

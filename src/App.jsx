@@ -15,6 +15,7 @@ import ScreenNode from './components/ScreenNode'
 import NodeConfigPanel from './components/NodeConfigPanel'
 import PreviewMode from './components/PreviewMode'
 import FocusMode from './components/FocusMode'
+import ImageEditor from './components/ImageEditor'
 
 import { GitBranch, Plus, Play, Settings2, Trash2, Layers, Download, Maximize2 } from 'lucide-react'
 import { exportSimulator } from './utils/exporter'
@@ -40,6 +41,7 @@ export default function App() {
   const [isPreview, setIsPreview] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [isFocusMode, setIsFocusMode] = useState(false)
+  const [isEditingImage, setIsEditingImage] = useState(false)
 
   const onConnect = useCallback(
     (params) => setEdges((eds) => addEdge({ ...params, ...edgeDefaults }, eds)),
@@ -129,6 +131,17 @@ export default function App() {
     <div style={S.root}>
       {isPreview && (
         <PreviewMode nodes={nodes} edges={edges} onExit={() => setIsPreview(false)} />
+      )}
+
+      {isEditingImage && selectedNode?.data?.image && (
+        <ImageEditor
+          imageUrl={selectedNode.data.image}
+          onSave={(newImageStr) => {
+            onUpdateNode(selectedNode.id, { image: newImageStr })
+            setIsEditingImage(false)
+          }}
+          onCancel={() => setIsEditingImage(false)}
+        />
       )}
 
       {/* ── LEFT TOOLBAR ─────────────────────────────────────── */}
@@ -276,7 +289,12 @@ export default function App() {
           )}
         </div>
         <div style={{ flex: 1, overflow: 'hidden' }}>
-          <NodeConfigPanel node={selectedNode} onUpdateNode={onUpdateNode} nodes={nodes} />
+          <NodeConfigPanel
+            node={selectedNode}
+            onUpdateNode={onUpdateNode}
+            nodes={nodes}
+            onEditImage={() => setIsEditingImage(true)}
+          />
         </div>
       </aside>
     </div>
