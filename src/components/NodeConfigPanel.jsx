@@ -813,6 +813,103 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage
     // Helper to get array of images
     const imageSegments = data.image ? (Array.isArray(data.image) ? data.image : [data.image]) : []
 
+    if (node.type === 'authNode') {
+        return (
+            <div style={{
+                display: 'flex', flexDirection: 'column', gap: 12,
+                padding: 14, height: '100%', overflowY: 'auto',
+            }}>
+                {/* Set as Start Node */}
+                <button
+                    onClick={() => update({ isStartNode: true })}
+                    disabled={data.isStartNode}
+                    style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        width: '100%', padding: '8px 12px', borderRadius: 7,
+                        border: data.isStartNode ? '1px solid rgba(46, 165, 103, 0.4)' : '1px solid var(--color-border)',
+                        background: data.isStartNode ? 'rgba(46, 165, 103, 0.15)' : 'transparent',
+                        color: data.isStartNode ? '#5ac98a' : 'var(--color-text-secondary)',
+                        fontSize: 11, fontWeight: data.isStartNode ? 700 : 500,
+                        cursor: data.isStartNode ? 'default' : 'pointer',
+                        transition: 'all 150ms ease-out',
+                    }}
+                >
+                    <div style={{
+                        width: 14, height: 14, borderRadius: '50%',
+                        background: data.isStartNode ? '#5ac98a' : 'transparent',
+                        border: data.isStartNode ? 'none' : '1px solid var(--color-border-strong)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                        {data.isStartNode && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
+                    </div>
+                    {data.isStartNode ? 'Pantalla Inicial' : 'Establecer como inicial'}
+                </button>
+
+                {/* Name */}
+                <div>
+                    <FieldLabel>Nombre interno</FieldLabel>
+                    <TextInput
+                        value={data.label || ''}
+                        onChange={e => update({ label: e.target.value })}
+                        placeholder="Login 1"
+                    />
+                </div>
+
+                <Divider label="Contenido del Menú" />
+
+                <div>
+                    <FieldLabel>Título Principal</FieldLabel>
+                    <TextInput
+                        value={data.title || ''}
+                        onChange={e => update({ title: e.target.value })}
+                        placeholder="Control de Accesos"
+                    />
+                </div>
+                <div>
+                    <FieldLabel>Objetivo / Instrucciones</FieldLabel>
+                    <textarea
+                        value={data.objective || ''}
+                        onChange={e => update({ objective: e.target.value })}
+                        placeholder="Bienvenido al simulador..."
+                        style={{
+                            width: '100%', height: 60,
+                            background: 'var(--color-control)',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: 6, padding: '6px 10px',
+                            fontSize: 12, resize: 'vertical',
+                            color: 'var(--color-text-primary)', outline: 'none',
+                        }}
+                    />
+                </div>
+
+                <Divider label="Botones Visibles" />
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <input
+                        type="checkbox"
+                        checked={data.showPractice !== false}
+                        onChange={(e) => update({ showPractice: e.target.checked })}
+                        style={{ cursor: 'pointer', accentColor: 'var(--color-brand)' }}
+                    />
+                    <span style={{ fontSize: 11, color: 'var(--color-text-primary)' }}>Modo Práctica (Estático)</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', opacity: 0.6 }}>
+                    <input type="checkbox" checked={true} readOnly style={{ accentColor: 'var(--color-brand)' }} />
+                    <span style={{ fontSize: 11, color: 'var(--color-text-primary)' }}>Evaluación (Navegará al flujo)</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <input
+                        type="checkbox"
+                        checked={data.showScores !== false}
+                        onChange={(e) => update({ showScores: e.target.checked })}
+                        style={{ cursor: 'pointer', accentColor: 'var(--color-brand)' }}
+                    />
+                    <span style={{ fontSize: 11, color: 'var(--color-text-primary)' }}>Puntajes (Estático)</span>
+                </label>
+            </div>
+        )
+    }
+
     return (
         <div style={{
             display: 'flex', flexDirection: 'column', gap: 12,

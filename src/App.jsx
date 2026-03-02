@@ -17,13 +17,14 @@ import PreviewMode from './components/PreviewMode'
 import FocusMode from './components/FocusMode'
 import ImageEditor from './components/ImageEditor'
 import ScrollImageBuilder from './components/ScrollImageBuilder'
+import AuthNode from './components/AuthNode'
 
-import { GitBranch, Plus, Play, Settings2, Trash2, Layers, Download, Maximize2, Save, Upload, Image as ImageIcon } from 'lucide-react'
+import { GitBranch, Plus, Play, Settings2, Trash2, Layers, Download, Maximize2, Save, Upload, Image as ImageIcon, UserCircle } from 'lucide-react'
 import { exportSimulator } from './utils/exporter'
 import { TRIGGER_COLORS } from './utils/triggers'
 
 // Must be stable — defined outside component
-const nodeTypes = { screenNode: ScreenNode }
+const nodeTypes = { screenNode: ScreenNode, authNode: AuthNode }
 
 const edgeDefaults = {
   type: 'smoothstep',
@@ -136,6 +137,29 @@ export default function App() {
     setSelectedNode(n)
   }, [nodes, setNodes])
 
+  const addAuthNode = useCallback(() => {
+    const id = `node-${nodeCounter++}`
+
+    // Calculate if it's the first node being created when none exist
+    const isFirstNode = nodes.length === 0;
+
+    const n = {
+      id,
+      type: 'authNode',
+      position: { x: 120 + Math.random() * 280, y: 80 + Math.random() * 180 },
+      data: {
+        label: `Login ${nodeCounter - 1}`,
+        title: 'Control de Accesos',
+        objective: 'Bienvenido al simulador. Ingresa tus datos para continuar.',
+        showPractice: true,
+        showScores: true,
+        isStartNode: isFirstNode
+      },
+    }
+    setNodes((nds) => [...nds, n])
+    setSelectedNode(n)
+  }, [nodes, setNodes])
+
   const deleteSelectedNode = useCallback(() => {
     if (!selectedNode) return
     setNodes((nds) => nds.filter((n) => n.id !== selectedNode.id))
@@ -237,6 +261,14 @@ export default function App() {
 
         {/* Separator */}
         <div style={S.sep} />
+
+        {/* Add auth node */}
+        <ToolBtn
+          title="Menú de Inicio / Login"
+          onClick={addAuthNode}
+        >
+          <UserCircle size={16} />
+        </ToolBtn>
 
         {/* Add node */}
         <ToolBtn

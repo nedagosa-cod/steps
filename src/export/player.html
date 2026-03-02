@@ -686,32 +686,101 @@
                 elImageWrapper.style.width = '100vw';
                 elImageWrapper.style.height = '100dvh';
 
-                if (data.image) {
-                    if (data.mediaType === 'video') {
-                        const videoSrc = Array.isArray(data.image) ? data.image[0] : data.image;
-                        canvasHtml += `<video src="${videoSrc}" class="scene-image" autoplay playsinline style="object-fit: cover; width: 100vw; height: 100dvh; display: block; flex-shrink: 0;"></video>`;
-                    } else {
-                        const imgArray = Array.isArray(data.image) ? data.image : [data.image];
-                        const imgElements = imgArray.map(src => `<img src="${src}" class="scene-image" draggable="false" style="width: 100%; height: auto; display: block;" />`).join("");
+                if (node.type === 'authNode') {
+                    const title = data.title || 'Control de Accesos';
+                    const objective = data.objective || 'Bienvenido al simulador. Ingresa tus datos para continuar.';
 
-                        // We wrap the images and triggers in a relatively positioned container
-                        // that matches its content's width/height naturally
-                        canvasHtml += `
-                            <div style="position: relative; width: 100%; max-width: 100%; margin: 0 auto;">
-                                <div style="display: flex; flex-direction: column; width: 100%;">
-                                    ${imgElements}
+                    const showPractice = data.showPractice !== false;
+                    const showScores = data.showScores !== false;
+
+                    canvasHtml = `
+                        <div style="flex: 1; display: flex; align-items: center; justify-content: center; background-color: #0a0d12; background-image: radial-gradient(circle at 50% 0%, rgba(124, 92, 252, 0.15) 0%, transparent 50%), radial-gradient(circle at 100% 100%, rgba(46, 165, 103, 0.1) 0%, transparent 50%); min-height: 100dvh; width: 100vw;">
+                            <div style="width: 420px; max-width: 90%; padding: 40px; background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05) inset; display: flex; flex-direction: column; gap: 24px; text-align: center;">
+                                <div>
+                                    <div style="font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 8px; letter-spacing: -0.02em;">${title}</div>
+                                    <div style="font-size: 13px; color: #9ca3af; line-height: 1.6;">${objective}</div>
                                 </div>
-                                <div id="ui-triggers-container" style="position: absolute; inset: 0; pointer-events: none;"></div>
+                                <div style="display: flex; flex-direction: column; gap: 16px;">
+                                    <div style="position: relative;">
+                                        <input type="text" id="auth-name-input" placeholder="Tu Nombre..." style="width: 100%; padding: 14px 16px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; color: white; font-size: 14px; outline: none; transition: border-color 200ms; text-align: center; font-family: inherit; box-sizing: border-box;" />
+                                        <div id="auth-error-msg" style="position: absolute; top: -24px; left: 0; right: 0; color: #ef4444; font-size: 11px; font-weight: 500; display: none;"></div>
+                                    </div>
+                                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                                        ${showPractice ? `<button disabled style="padding: 14px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05); color: rgba(255,255,255,0.4); font-size: 13px; font-weight: 600; cursor: not-allowed; font-family: inherit;">MODO PRÁCTICA</button>` : ''}
+                                        <button id="auth-eval-btn" style="padding: 14px; border-radius: 12px; background: var(--color-brand); border: none; color: white; font-size: 13px; font-weight: 700; cursor: pointer; transition: transform 100ms, filter 150ms, box-shadow 150ms; box-shadow: 0 4px 14px rgba(124, 92, 252, 0.4); font-family: inherit;">EVALUACIÓN</button>
+                                        ${showScores ? `<button disabled style="padding: 14px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05); color: rgba(255,255,255,0.4); font-size: 13px; font-weight: 600; cursor: not-allowed; font-family: inherit;">PUNTAJES</button>` : ''}
+                                    </div>
+                                </div>
                             </div>
-                        `;
-                    }
+                        </div>
+                    `;
                 } else {
-                    canvasHtml += `<div style="display: flex; align-items: center; justify-content: center; width: 100vw; height: 100dvh;"><span class="no-image-text">Sin imagen (o video) en este nodo</span></div>`;
+                    if (data.image) {
+                        if (data.mediaType === 'video') {
+                            const videoSrc = Array.isArray(data.image) ? data.image[0] : data.image;
+                            canvasHtml = `<video src="${videoSrc}" class="scene-image" autoplay playsinline muted style="object-fit: cover; width: 100vw; height: 100dvh; display: block; flex-shrink: 0;"></video>`;
+                        } else {
+                            const imgArray = Array.isArray(data.image) ? data.image : [data.image];
+                            const imgElements = imgArray.map(src => `<img src="${src}" class="scene-image" draggable="false" style="width: 100%; height: auto; display: block;" />`).join("");
+
+                            // We wrap the images and triggers in a relatively positioned container
+                            // that matches its content's width/height naturally
+                            canvasHtml = `
+                                <div style="position: relative; width: 100%; max-width: 100%; margin: 0 auto;">
+                                    <div style="display: flex; flex-direction: column; width: 100%;">
+                                        ${imgElements}
+                                    <div id="ui-triggers-container" style="position: absolute; inset: 0;"></div>
+                                </div>
+                            `;
+                        }
+                    } else {
+                        canvasHtml = `<div style="display: flex; align-items: center; justify-content: center; width: 100vw; height: 100dvh;"><span class="no-image-text">Sin imagen (o video) en este nodo</span></div>`;
+                    }
                 }
 
                 elImageWrapper.innerHTML = canvasHtml;
 
-                // Handle video auto-advance
+                // Auth Node Logic attachment
+                if (node.type === 'authNode') {
+                    const inputEl = document.getElementById('auth-name-input');
+                    const errEl = document.getElementById('auth-error-msg');
+                    const btnEl = document.getElementById('auth-eval-btn');
+
+                    if (inputValues['auth_name']) {
+                        inputEl.value = inputValues['auth_name'];
+                    }
+
+                    const attemptSubmit = () => {
+                        const name = inputEl.value.trim();
+                        if (!name) {
+                            errEl.textContent = 'Por favor, ingresa tu nombre para continuar.';
+                            errEl.style.display = 'block';
+                            inputEl.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                        } else {
+                            errEl.style.display = 'none';
+                            inputEl.style.borderColor = 'rgba(255,255,255,0.15)';
+                            inputValues['auth_name'] = name;
+                            const nextId = getNextNodeId();
+                            if (nextId) navigate(nextId);
+                        }
+                    };
+
+                    inputEl.addEventListener('input', (e) => {
+                        errEl.style.display = 'none';
+                        e.target.style.borderColor = 'rgba(255,255,255,0.15)';
+                        inputValues['auth_name'] = e.target.value;
+                    });
+                    inputEl.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') attemptSubmit();
+                    });
+                    btnEl.addEventListener('click', attemptSubmit);
+                    btnEl.addEventListener('mouseenter', e => { e.currentTarget.style.filter = 'brightness(1.1)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(124, 92, 252, 0.6)'; });
+                    btnEl.addEventListener('mouseleave', e => { e.currentTarget.style.filter = 'none'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(124, 92, 252, 0.4)'; });
+                    btnEl.addEventListener('mousedown', e => e.currentTarget.style.transform = 'scale(0.98)');
+                    btnEl.addEventListener('mouseup', e => e.currentTarget.style.transform = 'scale(1)');
+                }
+
+                // Handle video auto-advance and forced autoplay
                 if (data.mediaType === 'video') {
                     const videoEl = elImageWrapper.querySelector('video');
                     if (videoEl) {
@@ -719,6 +788,8 @@
                             const nextId = getNextNodeId();
                             if (nextId) navigate(nextId);
                         };
+                        // Explicitly call play to bypass some browser autoplay policies when injected via innerHTML
+                        videoEl.play().catch(e => console.warn('Autoplay prevented by browser policy:', e));
                     }
                 }
 

@@ -760,56 +760,170 @@ export default function PreviewMode({ nodes, edges, onExit }) {
                 )}
             </DraggableHUD>
 
-            {/* ── Main image container ── */}
-            <div style={{
-                position: 'fixed', inset: 0, zIndex: -1,
-                display: 'flex', flexDirection: 'column', // align to top for scrolling
-                backgroundColor: '#0a0d12',
-                overflowY: 'auto', // enable scrolling
-                overflowX: 'hidden',
-                transition: 'opacity 280ms ease-out, transform 280ms ease-out, filter 280ms ease-out',
-                opacity: transitioning ? 0 : 1,
-                transform: transitioning ? 'scale(0.98)' : 'scale(1)',
-                filter: transitioning ? 'blur(3px)' : 'blur(0)',
-            }}>
-                {data.image ? (
-                    <div ref={imgWrapperRef} style={{ position: 'relative', width: '100%', minHeight: '100dvh', margin: '0 auto' }}>
-                        {data.mediaType === 'video' ? (
-                            <video
-                                src={Array.isArray(data.image) ? data.image[0] : data.image}
-                                autoPlay
-                                playsInline
-                                onEnded={() => {
-                                    const nextId = getNextNodeId()
-                                    if (nextId) navigate(nextId)
-                                    else setSuccess(true)
-                                }}
-                                style={{
-                                    width: '100vw', height: '100dvh', display: 'block',
-                                    objectFit: 'cover'
-                                }}
-                            />
-                        ) : (
-                            <div style={{ position: 'relative', width: '100%', maxWidth: '100%', margin: '0 auto' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                                    {(Array.isArray(data.image) ? data.image : [data.image]).map((src, idx) => (
-                                        <img key={idx} src={src} alt={`screen-${idx}`} draggable={false} style={{ width: '100%', height: 'auto', display: 'block' }} />
-                                    ))}
-                                </div>
-                                <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-                                    {renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
-                                </div>
+            {currentNode.type === 'authNode' ? (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: -1,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: '#0a0d12',
+                    backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(124, 92, 252, 0.15) 0%, transparent 50%), radial-gradient(circle at 100% 100%, rgba(46, 165, 103, 0.1) 0%, transparent 50%)',
+                    transition: 'opacity 280ms ease-out, transform 280ms ease-out, filter 280ms ease-out',
+                    opacity: transitioning ? 0 : 1,
+                    transform: transitioning ? 'scale(0.98)' : 'scale(1)',
+                    filter: transitioning ? 'blur(3px)' : 'blur(0)',
+                }}>
+                    <div style={{
+                        width: 420, maxWidth: '90%', padding: 40,
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        backdropFilter: 'blur(20px)',
+                        WebkitBackdropFilter: 'blur(20px)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: 24,
+                        boxShadow: '0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05) inset',
+                        display: 'flex', flexDirection: 'column', gap: 24,
+                        textAlign: 'center'
+                    }}>
+                        <div>
+                            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 8, letterSpacing: '-0.02em' }}>
+                                {data.title || 'Control de Accesos'}
                             </div>
-                        )}
-                        {data.mediaType === 'video' && renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
+                            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+                                {data.objective || 'Bienvenido al simulador. Ingresa tus datos para continuar.'}
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type="text"
+                                    placeholder="Tu Nombre..."
+                                    value={inputValues['auth_name'] || ''}
+                                    onChange={e => {
+                                        setInputValues(prev => ({ ...prev, auth_name: e.target.value }))
+                                        setError('')
+                                    }}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter') {
+                                            const name = (inputValues['auth_name'] || '').trim()
+                                            if (!name) setError('Por favor, ingresa tu nombre para continuar.')
+                                            else {
+                                                const nextId = getNextNodeId()
+                                                if (nextId) navigate(nextId)
+                                            }
+                                        }
+                                    }}
+                                    style={{
+                                        width: '100%', padding: '14px 16px',
+                                        background: 'rgba(0,0,0,0.4)',
+                                        border: error ? '1px solid rgba(239, 68, 68, 0.5)' : '1px solid rgba(255,255,255,0.15)',
+                                        borderRadius: 12, color: 'white', fontSize: 14,
+                                        outline: 'none', transition: 'border-color 200ms',
+                                        textAlign: 'center'
+                                    }}
+                                />
+                                {error && <div style={{ position: 'absolute', top: -24, left: 0, right: 0, color: '#ef4444', fontSize: 11, fontWeight: 500 }}>{error}</div>}
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                {data.showPractice !== false && (
+                                    <button disabled style={{
+                                        padding: '14px', borderRadius: 12, background: 'rgba(255,255,255,0.05)',
+                                        border: '1px solid rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)',
+                                        fontSize: 13, fontWeight: 600, cursor: 'not-allowed'
+                                    }}>
+                                        MODO PRÁCTICA
+                                    </button>
+                                )}
+
+                                <button
+                                    onClick={() => {
+                                        const name = (inputValues['auth_name'] || '').trim()
+                                        if (!name) {
+                                            setError('Por favor, ingresa tu nombre para continuar.')
+                                            return
+                                        }
+                                        const nextId = getNextNodeId()
+                                        if (nextId) navigate(nextId)
+                                    }}
+                                    style={{
+                                        padding: '14px', borderRadius: 12, background: 'var(--color-brand)',
+                                        border: 'none', color: 'white', fontSize: 13, fontWeight: 700,
+                                        cursor: 'pointer', transition: 'transform 100ms, filter 150ms, box-shadow 150ms',
+                                        boxShadow: '0 4px 14px rgba(124, 92, 252, 0.4)'
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.filter = 'brightness(1.1)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(124, 92, 252, 0.6)' }}
+                                    onMouseLeave={e => { e.currentTarget.style.filter = 'none'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(124, 92, 252, 0.4)' }}
+                                    onMouseDown={e => e.currentTarget.style.transform = 'scale(0.98)'}
+                                    onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                                >
+                                    EVALUACIÓN
+                                </button>
+
+                                {data.showScores !== false && (
+                                    <button disabled style={{
+                                        padding: '14px', borderRadius: 12, background: 'rgba(255,255,255,0.05)',
+                                        border: '1px solid rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)',
+                                        fontSize: 13, fontWeight: 600, cursor: 'not-allowed'
+                                    }}>
+                                        PUNTAJES
+                                    </button>
+                                )}
+                            </div>
+                        </div>
                     </div>
-                ) : (
-                    <div ref={imgWrapperRef} style={{ position: 'relative', width: '100vw', height: '100dvh', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: 14, color: 'var(--color-text-muted)', pointerEvents: 'none' }}>Sin imagen en este nodo</span>
-                        {renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
-                    </div>
-                )}
-            </div>
+                </div>
+            ) : (
+                /* ── Main image container ── */
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: -1,
+                    display: 'flex', flexDirection: 'column', // align to top for scrolling
+                    backgroundColor: '#0a0d12',
+                    overflowY: 'auto', // enable scrolling
+                    overflowX: 'hidden',
+                    transition: 'opacity 280ms ease-out, transform 280ms ease-out, filter 280ms ease-out',
+                    opacity: transitioning ? 0 : 1,
+                    transform: transitioning ? 'scale(0.98)' : 'scale(1)',
+                    filter: transitioning ? 'blur(3px)' : 'blur(0)',
+                }}>
+                    {data.image ? (
+                        <div ref={imgWrapperRef} style={{ position: 'relative', width: '100%', minHeight: '100dvh', margin: '0 auto' }}>
+                            {data.mediaType === 'video' ? (
+                                <video
+                                    src={Array.isArray(data.image) ? data.image[0] : data.image}
+                                    autoPlay
+                                    playsInline
+                                    onEnded={() => {
+                                        const nextId = getNextNodeId()
+                                        if (nextId) navigate(nextId)
+                                        else setSuccess(true)
+                                    }}
+                                    style={{
+                                        width: '100vw', height: '100dvh', display: 'block',
+                                        objectFit: 'cover'
+                                    }}
+                                />
+                            ) : (
+                                <div style={{ position: 'relative', width: '100%', maxWidth: '100%', margin: '0 auto' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                                        {(Array.isArray(data.image) ? data.image : [data.image]).map((src, idx) => (
+                                            <img key={idx} src={src} alt={`screen-${idx}`} draggable={false} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                                        ))}
+                                    </div>
+                                    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                                        {renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
+                                    </div>
+                                </div>
+                            )}
+                            {data.mediaType === 'video' && renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
+                        </div>
+                    ) : (
+                        <div ref={imgWrapperRef} style={{ position: 'relative', width: '100vw', height: '100dvh', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ fontSize: 14, color: 'var(--color-text-muted)', pointerEvents: 'none' }}>Sin imagen en este nodo</span>
+                            {renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
+                        </div>
+                    )}
+                </div>
+            )}
+
         </div>
     )
 }
