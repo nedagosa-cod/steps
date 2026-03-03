@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react'
-import { Upload, MousePointer, Keyboard, Info, Image, Video, Trash2, GripVertical, ChevronDown, ChevronUp, TextCursorInput, List, ListTree, Plus, ImageIcon } from 'lucide-react'
+import { Upload, MousePointer, Keyboard, Info, Image, Video, Trash2, GripVertical, ChevronDown, ChevronUp, TextCursorInput, List, ListTree, Plus, ImageIcon, CircleDot, CheckSquare } from 'lucide-react'
 import { normalizeTriggers, makeDefaultTrigger, TRIGGER_COLORS, TRIGGER_LABELS } from '../utils/triggers'
 
 /* ── Atoms ── */
@@ -142,6 +142,8 @@ function TriggerCard({
                         { value: 'dropdown', icon: List, label: 'Lista' },
                         { value: 'dependent_dropdown', icon: ListTree, label: 'Lista Doble' },
                         { value: 'scroll_area', icon: GripVertical, label: 'Área Scroll' },
+                        { value: 'radio', icon: CircleDot, label: 'Radio' },
+                        { value: 'checkbox', icon: CheckSquare, label: 'Checkbox' },
                     ].map(({ value, icon: Icon, label }) => {
                         const active = trigger.type === value
                         const c = TRIGGER_COLORS[value] || TRIGGER_COLORS.click
@@ -449,6 +451,114 @@ function TriggerCard({
                                     ))}
                                 </select>
                             </div>
+                        </div>
+                    )}
+
+                    {/* Radio button configuration */}
+                    {trigger.type === 'radio' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <div>
+                                <FieldLabel>Nombre del grupo</FieldLabel>
+                                <input
+                                    value={trigger.radioGroup || ''}
+                                    onChange={e => onUpdate({ radioGroup: e.target.value })}
+                                    placeholder="Ej: pregunta1"
+                                    style={{
+                                        width: '100%',
+                                        background: 'var(--color-control)',
+                                        border: '1px solid var(--color-border)',
+                                        borderRadius: 6, padding: '5px 8px', height: 26,
+                                        fontSize: 11, color: 'var(--color-text-primary)', outline: 'none',
+                                        transition: 'border-color 150ms ease-out',
+                                    }}
+                                    onFocus={e => e.target.style.borderColor = colors.label}
+                                    onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
+                                />
+                            </div>
+                            <div>
+                                <FieldLabel>Texto de la opción</FieldLabel>
+                                <input
+                                    value={trigger.radioLabel || ''}
+                                    onChange={e => onUpdate({ radioLabel: e.target.value })}
+                                    placeholder="Ej: Opción A"
+                                    style={{
+                                        width: '100%',
+                                        background: 'var(--color-control)',
+                                        border: '1px solid var(--color-border)',
+                                        borderRadius: 6, padding: '5px 8px', height: 26,
+                                        fontSize: 11, color: 'var(--color-text-primary)', outline: 'none',
+                                        transition: 'border-color 150ms ease-out',
+                                    }}
+                                    onFocus={e => e.target.style.borderColor = colors.label}
+                                    onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
+                                />
+                            </div>
+                            <label style={{
+                                display: 'flex', alignItems: 'center', gap: 8,
+                                fontSize: 11, color: 'var(--color-text-secondary)', cursor: 'pointer',
+                            }}>
+                                <input
+                                    type="checkbox"
+                                    checked={!!trigger.isCorrectOption}
+                                    onChange={e => onUpdate({ isCorrectOption: e.target.checked })}
+                                    style={{ accentColor: colors.label }}
+                                />
+                                Es la opción correcta
+                            </label>
+                        </div>
+                    )}
+
+                    {/* Checkbox configuration */}
+                    {trigger.type === 'checkbox' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <div>
+                                <FieldLabel>Nombre del grupo</FieldLabel>
+                                <input
+                                    value={trigger.checkboxGroup || ''}
+                                    onChange={e => onUpdate({ checkboxGroup: e.target.value })}
+                                    placeholder="Ej: requisitos1"
+                                    style={{
+                                        width: '100%',
+                                        background: 'var(--color-control)',
+                                        border: '1px solid var(--color-border)',
+                                        borderRadius: 6, padding: '5px 8px', height: 26,
+                                        fontSize: 11, color: 'var(--color-text-primary)', outline: 'none',
+                                        transition: 'border-color 150ms ease-out',
+                                    }}
+                                    onFocus={e => e.target.style.borderColor = colors.label}
+                                    onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
+                                />
+                            </div>
+                            <div>
+                                <FieldLabel>Texto de la opción</FieldLabel>
+                                <input
+                                    value={trigger.checkboxLabel || ''}
+                                    onChange={e => onUpdate({ checkboxLabel: e.target.value })}
+                                    placeholder="Ej: Acepto términos"
+                                    style={{
+                                        width: '100%',
+                                        background: 'var(--color-control)',
+                                        border: '1px solid var(--color-border)',
+                                        borderRadius: 6, padding: '5px 8px', height: 26,
+                                        fontSize: 11, color: 'var(--color-text-primary)', outline: 'none',
+                                        transition: 'border-color 150ms ease-out',
+                                    }}
+                                    onFocus={e => e.target.style.borderColor = colors.label}
+                                    onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
+                                />
+                            </div>
+                            <label style={{
+                                display: 'flex', alignItems: 'center', gap: 8,
+                                fontSize: 11, color: 'var(--color-text-secondary)', cursor: 'pointer',
+                            }}>
+                                <input
+                                    type="checkbox"
+                                    checked={!!trigger.isCorrectOption}
+                                    onChange={e => onUpdate({ isCorrectOption: e.target.checked })}
+                                    style={{ accentColor: colors.label }}
+                                />
+                                Debe estar marcado (obligatorio)
+                            </label>
                         </div>
                     )}
 
@@ -1215,6 +1325,8 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage
                     <AddBtn onClick={() => addTrigger('dropdown')} icon={List} label="+ Lista" color={TRIGGER_COLORS.dropdown.label} />
                     <AddBtn onClick={() => addTrigger('dependent_dropdown')} icon={ListTree} label="+ Lista Doble" color={TRIGGER_COLORS.dependent_dropdown.label} />
                     <AddBtn onClick={() => addTrigger('scroll_area')} icon={GripVertical} label="+ Área Scroll" color={TRIGGER_COLORS.scroll_area.label} />
+                    <AddBtn onClick={() => addTrigger('radio')} icon={CircleDot} label="+ Radio" color={TRIGGER_COLORS.radio.label} />
+                    <AddBtn onClick={() => addTrigger('checkbox')} icon={CheckSquare} label="+ Checkbox" color={TRIGGER_COLORS.checkbox.label} />
                 </div>
             </div>
         </div>

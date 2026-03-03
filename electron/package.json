@@ -1,0 +1,32 @@
+{
+    "name": "simubuild-player",
+    "version": "1.0.0",
+    "description": "SimuBuild — Standalone Simulator Player",
+    "author": "SimuBuild",
+    "main": "main.js",
+    "scripts": {
+        "start": "electron ."
+    },
+    "devDependencies": {
+        "electron": "40.6.1"
+    },
+    "build": {
+        "appId": "com.simubuild.player",
+        "productName": "SimuBuild Player",
+        "electronVersion": "40.6.1",
+        "directories": {
+            "output": "dist"
+        },
+        "files": [
+            "main.js",
+            "app/**/*"
+        ],
+        "win": {
+            "target": "portable",
+            "icon": "icon.ico"
+        },
+        "portable": {
+            "artifactName": "SimuBuild-Player.exe"
+        }
+    }
+}

@@ -22,6 +22,7 @@ import ButtonEdge from './components/ButtonEdge'
 
 import { GitBranch, Plus, Play, Settings2, Trash2, Layers, Download, Maximize2, Save, Upload, Image as ImageIcon, UserCircle } from 'lucide-react'
 import { exportSimulator } from './utils/exporter'
+import { exportAsExe } from './utils/exporterExe'
 import { TRIGGER_COLORS } from './utils/triggers'
 
 // Must be stable — defined outside component
@@ -53,6 +54,7 @@ export default function App() {
   const [selectedNode, setSelectedNode] = useState(null)
   const [isPreview, setIsPreview] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  const [isExportingExe, setIsExportingExe] = useState(false)
   const [isFocusMode, setIsFocusMode] = useState(false)
   const [isEditingImage, setIsEditingImage] = useState(null) // null or index
   const [showImageBuilder, setShowImageBuilder] = useState(false)
@@ -75,6 +77,13 @@ export default function App() {
     setIsExporting(true)
     await exportSimulator(nodes, edges)
     setIsExporting(false)
+  }, [nodes, edges])
+
+  const handleExportExe = useCallback(async () => {
+    if (nodes.length === 0) return
+    setIsExportingExe(true)
+    await exportAsExe(nodes, edges)
+    setIsExportingExe(false)
   }, [nodes, edges])
 
   const handleSaveProject = useCallback(() => {
@@ -364,6 +373,12 @@ export default function App() {
             <GhostBtn onClick={handleExport} disabled={nodes.length === 0 || isExporting}>
               <Download size={12} style={{ marginRight: 5 }} />
               {isExporting ? 'Exportando...' : 'Exportar'}
+            </GhostBtn>
+
+            <GhostBtn onClick={handleExportExe} disabled={nodes.length === 0 || isExportingExe}
+              style={{ borderColor: isExportingExe ? 'rgba(124,92,252,0.5)' : undefined }}>
+              <Download size={12} style={{ marginRight: 5 }} />
+              {isExportingExe ? 'Generando EXE...' : 'Exportar EXE'}
             </GhostBtn>
 
             <PrimaryBtn

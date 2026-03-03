@@ -439,6 +439,108 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
             )
         }
 
+        if (trigger.type === 'radio') {
+            const groupName = trigger.radioGroup || trigger.id
+            const isSelectedInGroup = inputValues[`_radioGroup_${groupName}`] === trigger.id
+            return (
+                <div
+                    key={trigger.id}
+                    onClick={() => {
+                        if (isDone || isBlocked) return
+                        setInputValues(prev => ({ ...prev, [`_radioGroup_${groupName}`]: trigger.id }))
+                        if (trigger.isCorrectOption) {
+                            handleClickTrigger(trigger)
+                        }
+                    }}
+                    style={{
+                        position: 'absolute',
+                        left: `${hs.x}%`, top: `${hs.y}%`,
+                        width: `${hs.w}%`, height: `${hs.h}%`,
+                        borderRadius: 4,
+                        border: trigger.hidden ? 'none' : (isDone
+                            ? '1.5px solid rgba(46,165,103,0.6)'
+                            : `1.5px solid ${colors.borderActive}`),
+                        display: 'flex', alignItems: 'center',
+                        gap: 6, padding: '0 8px',
+                        background: trigger.hidden ? 'transparent' : (isDone ? 'rgba(46,165,103,0.12)' : 'rgba(10,13,18,0.75)'),
+                        transition: 'all 200ms ease-out',
+                        cursor: isDone ? 'default' : 'pointer',
+                        opacity: isBlocked ? 0.35 : 1,
+                        pointerEvents: isBlocked ? 'none' : 'auto',
+                    }}
+                >
+                    <span style={{
+                        width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
+                        border: `2px solid ${isSelectedInGroup ? (isDone ? '#5ac98a' : colors.label) : 'rgba(255,255,255,0.3)'}`,
+                        background: isSelectedInGroup ? (isDone ? '#5ac98a' : colors.label) : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'all 150ms',
+                    }}>
+                        {isSelectedInGroup && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
+                    </span>
+                    <span style={{
+                        fontSize: trigger.fontSize ? `${trigger.fontSize}px` : 'clamp(10px, 1.2vw, 14px)',
+                        color: trigger.hidden ? 'var(--color-text-primary)' : (isDone ? '#5ac98a' : '#e2eaf4'),
+                    }}>
+                        {trigger.radioLabel || 'Opción'}
+                    </span>
+                </div>
+            )
+        }
+
+        if (trigger.type === 'checkbox') {
+            const isChecked = !!inputValues[`_checkbox_${trigger.id}`]
+            return (
+                <div
+                    key={trigger.id}
+                    onClick={() => {
+                        if (isDone || isBlocked) return
+                        const newChecked = !isChecked
+                        setInputValues(prev => ({ ...prev, [`_checkbox_${trigger.id}`]: newChecked }))
+                        if (newChecked && trigger.isCorrectOption) {
+                            handleClickTrigger(trigger)
+                        } else if (!newChecked && isDone) {
+                            // unchecking: can't undo a completed trigger in this model
+                        }
+                    }}
+                    style={{
+                        position: 'absolute',
+                        left: `${hs.x}%`, top: `${hs.y}%`,
+                        width: `${hs.w}%`, height: `${hs.h}%`,
+                        borderRadius: 4,
+                        border: trigger.hidden ? 'none' : (isDone
+                            ? '1.5px solid rgba(46,165,103,0.6)'
+                            : `1.5px solid ${colors.borderActive}`),
+                        display: 'flex', alignItems: 'center',
+                        gap: 6, padding: '0 8px',
+                        background: trigger.hidden ? 'transparent' : (isDone ? 'rgba(46,165,103,0.12)' : 'rgba(10,13,18,0.75)'),
+                        transition: 'all 200ms ease-out',
+                        cursor: isDone ? 'default' : 'pointer',
+                        opacity: isBlocked ? 0.35 : 1,
+                        pointerEvents: isBlocked ? 'none' : 'auto',
+                    }}
+                >
+                    {/* Checkbox square */}
+                    <span style={{
+                        width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                        border: `2px solid ${(isChecked || isDone) ? (isDone ? '#5ac98a' : colors.label) : 'rgba(255,255,255,0.3)'}`,
+                        background: (isChecked || isDone) ? (isDone ? '#5ac98a' : colors.label) : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'all 150ms',
+                        fontSize: 10, color: '#fff', fontWeight: 700,
+                    }}>
+                        {(isChecked || isDone) && '✓'}
+                    </span>
+                    <span style={{
+                        fontSize: trigger.fontSize ? `${trigger.fontSize}px` : 'clamp(10px, 1.2vw, 14px)',
+                        color: trigger.hidden ? 'var(--color-text-primary)' : (isDone ? '#5ac98a' : '#e2eaf4'),
+                    }}>
+                        {trigger.checkboxLabel || 'Opción'}
+                    </span>
+                </div>
+            )
+        }
+
         return null
     })
 }
@@ -498,10 +600,13 @@ export default function PreviewMode({ nodes, edges, onExit }) {
     }, [])
 
     // Called after each trigger completes — check if ALL are done, OR if this specific trigger has a branch
-    const onTriggerComplete = useCallback((triggerId, allTriggers) => {
+    const onTriggerComplete = useCallback((triggerId, allTriggers, silent = false) => {
         setCompletedTriggers(prev => {
             const next = new Set(prev)
             next.add(triggerId)
+
+            // Silent mode: just mark as done, no navigation (used for radio group siblings)
+            if (silent) return next
 
             // Check for explicit navigation branching
             const completedTrigger = allTriggers.find(t => t.id === triggerId)
@@ -571,6 +676,14 @@ export default function PreviewMode({ nodes, edges, onExit }) {
 
     const handleClickTrigger = (trigger) => {
         if (completedTriggers.has(trigger.id)) return
+        // If this is a correct radio, also complete all siblings in the same group
+        if (trigger.type === 'radio' && trigger.radioGroup) {
+            triggers.forEach(t => {
+                if (t.type === 'radio' && t.radioGroup === trigger.radioGroup && t.id !== trigger.id) {
+                    onTriggerComplete(t.id, triggers, true) // silent complete
+                }
+            })
+        }
         onTriggerComplete(trigger.id, triggers)
     }
 

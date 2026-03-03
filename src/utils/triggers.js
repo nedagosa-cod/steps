@@ -95,6 +95,20 @@ export const TRIGGER_COLORS = {
         bgActive: 'rgba(16,185,129,0.28)',
         label: '#10b981',
     },
+    radio: {
+        border: 'rgba(251,146,60,0.65)',
+        bg: 'rgba(251,146,60,0.10)',
+        borderActive: 'rgba(251,146,60,0.9)',
+        bgActive: 'rgba(251,146,60,0.28)',
+        label: '#fb923c',
+    },
+    checkbox: {
+        border: 'rgba(6,182,212,0.65)',
+        bg: 'rgba(6,182,212,0.10)',
+        borderActive: 'rgba(6,182,212,0.9)',
+        bgActive: 'rgba(6,182,212,0.28)',
+        label: '#06b6d4',
+    },
 }
 
-export const TRIGGER_LABELS = { click: 'Click', double_click: 'Doble Clic', input: 'Input', keypress: 'Tecla', dropdown: 'Lista', dependent_dropdown: 'Lista Dep.', scroll_area: 'Área Scroll' }
+export const TRIGGER_LABELS = { click: 'Click', double_click: 'Doble Clic', input: 'Input', keypress: 'Tecla', dropdown: 'Lista', dependent_dropdown: 'Lista Dep.', scroll_area: 'Área Scroll', radio: 'Radio', checkbox: 'Checkbox' }

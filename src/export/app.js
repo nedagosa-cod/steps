@@ -15,6 +15,8 @@
         dependent_dropdown: { bg: 'rgba(56,139,253,0.12)', bgActive: 'rgba(56,139,253,0.25)', border: 'rgba(56,139,253,0.35)', borderActive: 'rgba(56,139,253,0.9)', label: '#388bfd' },
         keypress: { bg: 'rgba(232,62,140,0.15)', bgActive: 'rgba(232,62,140,0.28)', border: 'rgba(232,62,140,0.35)', borderActive: 'rgba(232,62,140,0.9)', label: '#e83e8c' },
         scroll_area: { bg: 'rgba(16,185,129,0.10)', bgActive: 'rgba(16,185,129,0.18)', border: 'rgba(16,185,129,0.35)', borderActive: 'rgba(16,185,129,0.9)', label: '#10b981' },
+        radio: { bg: 'rgba(251,146,60,0.10)', bgActive: 'rgba(251,146,60,0.18)', border: 'rgba(251,146,60,0.35)', borderActive: 'rgba(251,146,60,0.9)', label: '#fb923c' },
+        checkbox: { bg: 'rgba(6,182,212,0.10)', bgActive: 'rgba(6,182,212,0.18)', border: 'rgba(6,182,212,0.35)', borderActive: 'rgba(6,182,212,0.9)', label: '#06b6d4' },
     };
 
     // ── Data ──────────────────────────────────────────────────
@@ -137,9 +139,25 @@
     }
 
     // ── Trigger completion ───────────────────────────────────
-    function handleTriggerComplete(tId, triggers) {
+    function handleTriggerComplete(tId, triggers, silent) {
         completedTriggers.add(tId);
+
+        // If completing a correct radio, also mark all siblings in the group as done
+        if (!silent) {
+            const t = triggers.find(tr => tr.id === tId);
+            if (t && t.type === "radio" && t.radioGroup) {
+                triggers.forEach(tr => {
+                    if (tr.type === "radio" && tr.radioGroup === t.radioGroup && tr.id !== tId) {
+                        completedTriggers.add(tr.id);
+                    }
+                });
+            }
+        }
+
         render();
+
+        // Silent mode: just mark as done, no navigation (used for radio group siblings)
+        if (silent) return;
 
         // Check for explicit navigation branching
         const t = triggers.find(tr => tr.id === tId);
@@ -187,6 +205,8 @@
                         case "dependent_dropdown": hint = "Selecciona la subcategoría correcta."; break;
                         case "keypress": hint = "Presiona la tecla " + (t.keyCode || "?") + "."; break;
                         case "scroll_area": hint = "Desplaza el contenido hacia abajo."; break;
+                        case "radio": hint = "Selecciona la opción correcta."; break;
+                        case "checkbox": hint = "Marca la casilla correcta."; break;
                         default: hint = "Realiza la acción requerida.";
                     }
                 }
@@ -464,6 +484,92 @@
                 placeholder.style.cssText = "padding:10px;text-align:center;color:" + colors.label + ";font-size:11px;background:rgba(10,13,18,0.8);min-height:100%";
                 el.appendChild(placeholder);
             }
+        }
+
+        // ── Radio ─────────────────────────────────────────────
+        else if (t.type === "radio") {
+            const groupName = t.radioGroup || t.id;
+            const groupKey = "_radioGroup_" + groupName;
+            const isSelectedInGroup = inputValues[groupKey] === t.id;
+
+            el.style.borderRadius = "4px";
+            el.style.display = "flex";
+            el.style.alignItems = "center";
+            el.style.gap = "6px";
+            el.style.padding = "0 8px";
+            el.style.cursor = isDone ? "default" : "pointer";
+
+            if (!isDone) {
+                el.style.border = t.hidden ? "none" : "1.5px solid " + colors.borderActive;
+                el.style.background = t.hidden ? "transparent" : "rgba(10,13,18,0.75)";
+            }
+
+            // Radio circle
+            const circle = document.createElement("span");
+            circle.style.cssText = "width:14px;height:14px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 150ms;border:2px solid " + (isSelectedInGroup ? (isDone ? "#5ac98a" : colors.label) : "rgba(255,255,255,0.3)") + ";background:" + (isSelectedInGroup ? (isDone ? "#5ac98a" : colors.label) : "transparent");
+            if (isSelectedInGroup) {
+                const dot = document.createElement("span");
+                dot.style.cssText = "width:6px;height:6px;border-radius:50%;background:#fff";
+                circle.appendChild(dot);
+            }
+            el.appendChild(circle);
+
+            // Label text
+            const labelSpan = document.createElement("span");
+            labelSpan.textContent = t.radioLabel || "Opción";
+            labelSpan.style.cssText = "font-size:" + (t.fontSize ? t.fontSize + "px" : "clamp(10px, 1.2vw, 14px)") + ";color:" + (t.hidden ? "var(--color-text-primary)" : (isDone ? "#5ac98a" : "#e2eaf4"));
+            el.appendChild(labelSpan);
+
+            el.addEventListener("click", () => {
+                if (isDone || isBlocked) return;
+                inputValues[groupKey] = t.id;
+                if (t.isCorrectOption) {
+                    handleTriggerComplete(t.id, triggers);
+                } else {
+                    render(); // re-render to show selection
+                }
+            });
+        }
+
+        // ── Checkbox ─────────────────────────────────────────
+        else if (t.type === "checkbox") {
+            const checkKey = "_checkbox_" + t.id;
+            const isChecked = !!inputValues[checkKey];
+
+            el.style.borderRadius = "4px";
+            el.style.display = "flex";
+            el.style.alignItems = "center";
+            el.style.gap = "6px";
+            el.style.padding = "0 8px";
+            el.style.cursor = isDone ? "default" : "pointer";
+
+            if (!isDone) {
+                el.style.border = t.hidden ? "none" : "1.5px solid " + colors.borderActive;
+                el.style.background = t.hidden ? "transparent" : "rgba(10,13,18,0.75)";
+            }
+
+            // Checkbox square
+            const box = document.createElement("span");
+            box.style.cssText = "width:14px;height:14px;border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 150ms;font-size:10px;color:#fff;font-weight:700;border:2px solid " + ((isChecked || isDone) ? (isDone ? "#5ac98a" : colors.label) : "rgba(255,255,255,0.3)") + ";background:" + ((isChecked || isDone) ? (isDone ? "#5ac98a" : colors.label) : "transparent");
+            if (isChecked || isDone) box.textContent = "✓";
+            el.appendChild(box);
+
+            // Label text
+            const labelSpan = document.createElement("span");
+            labelSpan.textContent = t.checkboxLabel || "Opción";
+            labelSpan.style.cssText = "font-size:" + (t.fontSize ? t.fontSize + "px" : "clamp(10px, 1.2vw, 14px)") + ";color:" + (t.hidden ? "var(--color-text-primary)" : (isDone ? "#5ac98a" : "#e2eaf4"));
+            el.appendChild(labelSpan);
+
+            el.addEventListener("click", () => {
+                if (isDone || isBlocked) return;
+                const newChecked = !isChecked;
+                inputValues[checkKey] = newChecked;
+                if (newChecked && t.isCorrectOption) {
+                    handleTriggerComplete(t.id, triggers);
+                } else {
+                    render();
+                }
+            });
         }
 
         return el;

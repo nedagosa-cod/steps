@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
+electron/dist
+electron/app
+electron/node_modules
 
 # Editor directories and files
 .vscode/*
