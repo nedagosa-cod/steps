@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SimuBuild - Player</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="alldata/data.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <!-- Floating HUD -->
+        <div class="hud-container" id="hud">
+            <div class="hud-card">
+                <div class="hud-drag-handle" id="hud-drag">⋮⋮⋮</div>
+
+                <!-- Header -->
+                <div class="hud-header">
+                    <div style="display:flex;flex-direction:column;gap:6px">
+                        <div style="display:flex;align-items:center;gap:6px">
+                            <span class="hud-label" id="ui-mode-label">Playback</span>
+                            <span style="color:var(--color-border);font-size:10px">·</span>
+                            <span class="hud-screen-name" id="ui-screen-name">Cargando…</span>
+                        </div>
+                        <div class="step-pills" id="ui-step-indicator"></div>
+                    </div>
+                    <div style="display:flex;gap:6px">
+                        <button class="hud-btn hud-btn-icon" id="btn-fullscreen" title="Pantalla completa">⛶</button>
+                        <button class="hud-btn hud-btn-text" id="btn-exit" title="Salir">✕ Salir</button>
+                    </div>
+                </div>
+
+                <!-- Trigger progress -->
+                <div class="hud-progress-row" id="ui-progress-row"></div>
+
+                <!-- Practice Guide -->
+                <div class="practice-guide" id="ui-practice-guide">
+                    <div class="practice-guide-title">Guía de Práctica</div>
+                    <div id="ui-practice-guide-content"></div>
+                </div>
+
+                <!-- Feedback -->
+                <div class="hud-feedback feedback-error" id="ui-error">
+                    <span>⚠</span> <span id="ui-error-text"></span>
+                </div>
+                <div class="hud-feedback feedback-success" id="ui-success">
+                    <span>✓</span> ¡Completado!
+                </div>
+            </div>
+        </div>
+
+        <!-- Main canvas area -->
+        <div id="image-wrapper"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

@@ -871,7 +871,7 @@
 
                     if (t.type === 'click' || t.type === 'double_click') {
                         if (isDone) {
-                            el.innerHTML = t.hidden ? '' : `< span class="trigger-check" >✓</span > `;
+                            el.innerHTML = t.hidden ? '' : `<span class="trigger-check">✓</span>`;
                         } else {
                             const handler = () => {
                                 if (!isTransitioning && !isDone && !isBlocked) {
@@ -1037,7 +1037,7 @@
                                 if (t.textColor) icon.style.color = t.textColor;
                             } else if (!t.hidden) {
                                 const arrowColor = t.textColor || '#e2eaf4';
-                                icon.innerHTML = `< svg xmlns = "http://www.w3.org/2000/svg" width = "14" height = "14" viewBox = "0 0 24 24" fill = "none" stroke = "${arrowColor}" stroke - width="2" stroke - linecap="round" stroke - linejoin="round" > <path d="m6 9 6 6 6-6" /></svg > `;
+                                icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${arrowColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>`;
                             }
                             el.appendChild(icon);
                         }
@@ -1178,15 +1178,15 @@
                                 if (t.textColor) icon.style.color = t.textColor;
                             } else if (!t.hidden) {
                                 const arrowColor = t.textColor || '#e2eaf4';
-                                icon.innerHTML = \`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="\${arrowColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>\`;
+                                icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${arrowColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>`;
                             }
                             el.appendChild(icon);
                         }
                     } else if (t.type === 'keypress') {
                         if (isDone) {
-                            el.innerHTML = t.hidden ? '' : `< span class="trigger-check" >✓</span > `;
+                            el.innerHTML = t.hidden ? '' : `<span class="trigger-check">✓</span>`;
                         } else if (!t.hidden) {
-                            el.innerHTML = `< span style = "font-size:clamp(10px, 1vw, 14px);font-weight:700;color:var(--color-trigger-keypress-border);background:rgba(10,13,18,0.5);padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:0.05em" > ${ t.keyCode || '?' }</span > `;
+                            el.innerHTML = `<span style="font-size:clamp(10px, 1vw, 14px);font-weight:700;color:var(--color-trigger-keypress-border);background:rgba(10,13,18,0.5);padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:0.05em">${t.keyCode || '?'}</span>`;
                         }
                     } else if (t.type === 'scroll_area') {
                         el.style.border = t.hidden ? 'none' : '1px dashed #10b981';
@@ -1196,9 +1196,9 @@
                         el.style.background = 'transparent';
 
                         if (t.contentImage) {
-                            el.innerHTML = `< img src = "${t.contentImage}" alt = "Contenido scroll" style = "width: 100%; height: auto; display: block;" draggable = "false" /> `;
+                            el.innerHTML = `<img src="${t.contentImage}" alt="Contenido scroll" style="width: 100%; height: auto; display: block;" draggable="false" />`;
                         } else if (!t.hidden) {
-                            el.innerHTML = `< div style = "padding: 10px; text-align: center; color: #10b981; font-size: 11px; background: rgba(10,13,18,0.8); min-height: 100%;" > [Área de Scroll sin imagen]</div > `;
+                            el.innerHTML = `<div style="padding: 10px; text-align: center; color: #10b981; font-size: 11px; background: rgba(10,13,18,0.8); min-height: 100%;">[Área de Scroll sin imagen]</div>`;
                         }
                     }
 
@@ -1215,10 +1215,10 @@
                 if (triggers.length > 1) {
                     let reqHtml = triggers.map(t => {
                         const done = completedTriggers.has(t.id);
-                        return `< div class="trigger-badge ${done ? 'done' : ''}" >
+                        return `<div class="trigger-badge ${done ? 'done' : ''}">
                           <span class="badge-icon">${done ? '✓' : '○'}</span>
                           <span class="badge-label">${t.type}</span>
-                        </div > `;
+                        </div>`;
                     }).join("");
 
                     const reqTriggers = triggers.filter(t => !t.isOptional);
@@ -1226,7 +1226,7 @@
                     
                     if (reqCompleted < reqTriggers.length) {
                         const remaining = reqTriggers.length - reqCompleted;
-                        reqHtml += `< span class="remaining-text" > ${ remaining } restante${ remaining !== 1 ? 's' : '' }</span >`;
+                        reqHtml += `<span class="remaining-text">${remaining} restante${remaining !== 1 ? 's' : ''}</span>`;
                     }
                     elProgressRow.innerHTML = reqHtml;
                 } else {

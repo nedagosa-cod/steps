@@ -1,6 +1,10 @@
 import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
-import playerHtml from '../export/player.html?raw'
+
+// Import the 3 export template files as raw strings
+import indexHtml from '../export/index.html?raw'
+import stylesCss from '../export/styles.css?raw'
+import appJs from '../export/app.js?raw'
 
 /**
  * Generates and downloads a ZIP file containing the standalone simulation player
@@ -37,11 +41,11 @@ export async function exportSimulator(originalNodes, originalEdges) {
             // Add file to zip
             assetsFolder.file(filename, base64Data, { base64: true })
 
-            // Return the relative path to be used in player.html
+            // Return the relative path to be used in the player
             return `./assets/${filename}`
         }
 
-        // 1. Process Nodes and Triggers
+        // 1. Process Nodes and Triggers — extract embedded base64 to assets
         for (const node of nodes) {
             if (!node.data) continue
 
@@ -64,18 +68,18 @@ export async function exportSimulator(originalNodes, originalEdges) {
             }
         }
 
-        // 2. Add the standalone player template at the root
-        zip.file('index.html', playerHtml)
+        // 2. Add the modular player files
+        zip.file('index.html', indexHtml)
+        zip.file('styles.css', stylesCss)
+        zip.file('app.js', appJs)
 
         // 3. Generate the optimized data payload
         const simDataJs = `window.SIM_DATA = ${JSON.stringify({ nodes, edges }, null, 2)};`
         const alldataFolder = zip.folder('alldata')
         alldataFolder.file('data.js', simDataJs)
 
-        // 4. Generate the ZIP blob
+        // 4. Generate the ZIP blob and trigger download
         const blob = await zip.generateAsync({ type: 'blob' })
-
-        // 4. Trigger download
         saveAs(blob, 'simulador.zip')
 
         return true
