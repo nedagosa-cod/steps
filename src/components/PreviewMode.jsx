@@ -511,8 +511,8 @@ export default function PreviewMode({ nodes, edges, onExit }) {
                 return next // the HUD will stick slightly then switch
             }
 
-            // Normal progression: Check if every trigger in this node is now done
-            const allDone = allTriggers.every(t => next.has(t.id))
+            // Normal progression: Check if every required trigger in this node is now done
+            const allDone = allTriggers.every(t => t.isOptional || next.has(t.id))
             if (allDone) {
                 const nextId = getNextNodeId()
                 if (nextId) {
@@ -726,204 +726,295 @@ export default function PreviewMode({ nodes, edges, onExit }) {
                             )
                         })}
                         {/* Pending count */}
-                        {completedTriggers.size < triggers.length && (
-                            <span style={{ fontSize: 9, color: 'var(--color-text-muted)', marginLeft: 2 }}>
-                                {triggers.length - completedTriggers.size} res.
-                            </span>
-                        )}
+                        {(() => {
+                            const reqTriggers = triggers.filter(t => !t.isOptional);
+                            const reqCompleted = reqTriggers.filter(t => completedTriggers.has(t.id)).length;
+                            if (reqCompleted < reqTriggers.length) {
+                                return (
+                                    <span style={{ fontSize: 9, color: 'var(--color-text-muted)', marginLeft: 2 }}>
+                                        {reqTriggers.length - reqCompleted} res.
+                                    </span>
+                                );
+                            }
+                            return null;
+                        })()}
                     </div>
                 )}
+
+                {/* ── Practice Mode Guide ── */}
+                {sessionStorage.getItem('isPracticeMode') === 'true' && currentNode.type !== 'authNode' && (
+                    <div style={{
+                        marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8,
+                        paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.08)'
+                    }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.05em', color: 'var(--color-brand)', textTransform: 'uppercase' }}>
+                            Guía de Práctica
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {(() => {
+                                const guideTriggers = triggers.filter(t => !t.isOptional);
+                                if (guideTriggers.length === 0) {
+                                    return <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontStyle: 'italic' }}>No hay acciones obligatorias en esta pantalla.</div>;
+                                }
+                                return guideTriggers.map((t, index) => {
+                                    const done = completedTriggers.has(t.id);
+
+                                    // Fallback hints if empty
+                                    let autoHint = t.hint;
+                                    if (!autoHint) {
+                                        switch (t.type) {
+                                            case 'click': autoHint = "Haz clic en la zona indicada."; break;
+                                            case 'double_click': autoHint = "Haz doble clic en la zona indicada."; break;
+                                            case 'input': autoHint = "Completa el campo de texto."; break;
+                                            case 'dropdown': autoHint = "Selecciona la opción correcta en la lista."; break;
+                                            case 'dependent_dropdown': autoHint = "Selecciona la subcategoría correcta."; break;
+                                            case 'keypress': autoHint = `Presiona la tecla ${t.keyCode}.`; break;
+                                            case 'scroll_area': autoHint = "Desplaza el contenido hacia abajo."; break;
+                                            default: autoHint = "Realiza la acción requerida.";
+                                        }
+                                    }
+
+                                    return (
+                                        <div key={t.id} style={{
+                                            display: 'flex', alignItems: 'flex-start', gap: 8,
+                                            opacity: done ? 0.4 : 1,
+                                            transition: 'all 300ms ease',
+                                        }}>
+                                            <div style={{
+                                                marginTop: 2, width: 14, height: 14, borderRadius: '50%',
+                                                border: `1px solid ${done ? '#5ac98a' : 'var(--color-border-strong)'}`,
+                                                background: done ? 'rgba(90, 201, 138, 0.2)' : 'transparent',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                                            }}>
+                                                {done && <span style={{ color: '#5ac98a', fontSize: 10 }}>✓</span>}
+                                            </div>
+                                            <div style={{
+                                                fontSize: 12, color: done ? 'var(--color-text-muted)' : 'var(--color-text-primary)',
+                                                textDecoration: done ? 'line-through' : 'none', lineHeight: 1.4
+                                            }}>
+                                                <span style={{ fontWeight: 600, marginRight: 4 }}>Paso {index + 1}:</span>
+                                                {autoHint}
+                                            </div>
+                                        </div>
+                                    );
+                                });
+                            })()}
+                        </div>
+                    </div>
+                )
+                }
 
                 {/* ── Feedback ── */}
-                {error && (
-                    <div style={{
-                        marginTop: 10, display: 'flex', alignItems: 'center', gap: 7,
-                        padding: '6px 12px', borderRadius: 6,
-                        border: '1px solid rgba(192,64,64,0.3)', background: 'rgba(192,64,64,0.1)',
-                        fontSize: 11, color: '#d97979',
-                    }}>
-                        <AlertCircle size={12} />
-                        {error}
-                    </div>
-                )}
-
-                {success && (
-                    <div style={{
-                        marginTop: 10, display: 'flex', alignItems: 'center', gap: 7,
-                        padding: '6px 14px', borderRadius: 6,
-                        border: '1px solid rgba(46,165,103,0.3)', background: 'rgba(46,165,103,0.1)',
-                        fontSize: 11, color: '#5ac98a',
-                    }}>
-                        <CheckCircle size={12} />
-                        ¡Completado!
-                    </div>
-                )}
-            </DraggableHUD>
-
-            {currentNode.type === 'authNode' ? (
-                <div style={{
-                    position: 'fixed', inset: 0, zIndex: -1,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: '#0a0d12',
-                    backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(124, 92, 252, 0.15) 0%, transparent 50%), radial-gradient(circle at 100% 100%, rgba(46, 165, 103, 0.1) 0%, transparent 50%)',
-                    transition: 'opacity 280ms ease-out, transform 280ms ease-out, filter 280ms ease-out',
-                    opacity: transitioning ? 0 : 1,
-                    transform: transitioning ? 'scale(0.98)' : 'scale(1)',
-                    filter: transitioning ? 'blur(3px)' : 'blur(0)',
-                }}>
-                    <div style={{
-                        width: 420, maxWidth: '90%', padding: 40,
-                        background: 'rgba(255, 255, 255, 0.03)',
-                        backdropFilter: 'blur(20px)',
-                        WebkitBackdropFilter: 'blur(20px)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: 24,
-                        boxShadow: '0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05) inset',
-                        display: 'flex', flexDirection: 'column', gap: 24,
-                        textAlign: 'center'
-                    }}>
-                        <div>
-                            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 8, letterSpacing: '-0.02em' }}>
-                                {data.title || 'Control de Accesos'}
-                            </div>
-                            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-                                {data.objective || 'Bienvenido al simulador. Ingresa tus datos para continuar.'}
-                            </div>
+                {
+                    error && (
+                        <div style={{
+                            marginTop: 10, display: 'flex', alignItems: 'center', gap: 7,
+                            padding: '6px 12px', borderRadius: 6,
+                            border: '1px solid rgba(192,64,64,0.3)', background: 'rgba(192,64,64,0.1)',
+                            fontSize: 11, color: '#d97979',
+                        }}>
+                            <AlertCircle size={12} />
+                            {error}
                         </div>
+                    )
+                }
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                            <div style={{ position: 'relative' }}>
-                                <input
-                                    type="text"
-                                    placeholder="Tu Nombre..."
-                                    value={inputValues['auth_name'] || ''}
-                                    onChange={e => {
-                                        setInputValues(prev => ({ ...prev, auth_name: e.target.value }))
-                                        setError('')
-                                    }}
-                                    onKeyDown={e => {
-                                        if (e.key === 'Enter') {
-                                            const name = (inputValues['auth_name'] || '').trim()
-                                            if (!name) setError('Por favor, ingresa tu nombre para continuar.')
-                                            else {
+                {
+                    success && (
+                        <div style={{
+                            marginTop: 10, display: 'flex', alignItems: 'center', gap: 7,
+                            padding: '6px 14px', borderRadius: 6,
+                            border: '1px solid rgba(46,165,103,0.3)', background: 'rgba(46,165,103,0.1)',
+                            fontSize: 11, color: '#5ac98a',
+                        }}>
+                            <CheckCircle size={12} />
+                            ¡Completado!
+                        </div>
+                    )
+                }
+            </DraggableHUD >
+
+            {
+                currentNode.type === 'authNode' ? (
+                    <div style={{
+                        position: 'fixed', inset: 0, zIndex: -1,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        backgroundColor: '#0a0d12',
+                        backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(124, 92, 252, 0.15) 0%, transparent 50%), radial-gradient(circle at 100% 100%, rgba(46, 165, 103, 0.1) 0%, transparent 50%)',
+                        transition: 'opacity 280ms ease-out, transform 280ms ease-out, filter 280ms ease-out',
+                        opacity: transitioning ? 0 : 1,
+                        transform: transitioning ? 'scale(0.98)' : 'scale(1)',
+                        filter: transitioning ? 'blur(3px)' : 'blur(0)',
+                    }}>
+                        <div style={{
+                            width: 420, maxWidth: '90%', padding: 40,
+                            background: 'rgba(255, 255, 255, 0.03)',
+                            backdropFilter: 'blur(20px)',
+                            WebkitBackdropFilter: 'blur(20px)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: 24,
+                            boxShadow: '0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05) inset',
+                            display: 'flex', flexDirection: 'column', gap: 24,
+                            textAlign: 'center'
+                        }}>
+                            <div>
+                                <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 8, letterSpacing: '-0.02em' }}>
+                                    {data.title || 'Control de Accesos'}
+                                </div>
+                                <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+                                    {data.objective || 'Bienvenido al simulador. Ingresa tus datos para continuar.'}
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="Tu Nombre..."
+                                        value={inputValues['auth_name'] || ''}
+                                        onChange={e => {
+                                            setInputValues(prev => ({ ...prev, auth_name: e.target.value }))
+                                            setError('')
+                                        }}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                                const name = (inputValues['auth_name'] || '').trim()
+                                                if (!name) setError('Por favor, ingresa tu nombre para continuar.')
+                                                else {
+                                                    const nextId = getNextNodeId()
+                                                    if (nextId) navigate(nextId)
+                                                }
+                                            }
+                                        }}
+                                        style={{
+                                            width: '100%', padding: '14px 16px',
+                                            background: 'rgba(0,0,0,0.4)',
+                                            border: error ? '1px solid rgba(239, 68, 68, 0.5)' : '1px solid rgba(255,255,255,0.15)',
+                                            borderRadius: 12, color: 'white', fontSize: 14,
+                                            outline: 'none', transition: 'border-color 200ms',
+                                            textAlign: 'center'
+                                        }}
+                                    />
+                                    {error && <div style={{ position: 'absolute', top: -24, left: 0, right: 0, color: '#ef4444', fontSize: 11, fontWeight: 500 }}>{error}</div>}
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                    {data.showPractice !== false && (
+                                        <button
+                                            onClick={() => {
+                                                const name = (inputValues['auth_name'] || '').trim()
+                                                if (!name) {
+                                                    setError('Por favor, ingresa tu nombre para continuar.')
+                                                    return
+                                                }
+                                                sessionStorage.setItem('isPracticeMode', 'true')
                                                 const nextId = getNextNodeId()
                                                 if (nextId) navigate(nextId)
+                                            }}
+                                            style={{
+                                                padding: '14px', borderRadius: 12, background: 'rgba(255,255,255,0.05)',
+                                                border: '1px solid rgba(255,255,255,0.15)', color: 'white',
+                                                fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 150ms'
+                                            }}
+                                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                                        >
+                                            MODO PRÁCTICA
+                                        </button>
+                                    )}
+
+                                    <button
+                                        onClick={() => {
+                                            const name = (inputValues['auth_name'] || '').trim()
+                                            if (!name) {
+                                                setError('Por favor, ingresa tu nombre para continuar.')
+                                                return
                                             }
-                                        }
-                                    }}
-                                    style={{
-                                        width: '100%', padding: '14px 16px',
-                                        background: 'rgba(0,0,0,0.4)',
-                                        border: error ? '1px solid rgba(239, 68, 68, 0.5)' : '1px solid rgba(255,255,255,0.15)',
-                                        borderRadius: 12, color: 'white', fontSize: 14,
-                                        outline: 'none', transition: 'border-color 200ms',
-                                        textAlign: 'center'
-                                    }}
-                                />
-                                {error && <div style={{ position: 'absolute', top: -24, left: 0, right: 0, color: '#ef4444', fontSize: 11, fontWeight: 500 }}>{error}</div>}
-                            </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                {data.showPractice !== false && (
-                                    <button disabled style={{
-                                        padding: '14px', borderRadius: 12, background: 'rgba(255,255,255,0.05)',
-                                        border: '1px solid rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)',
-                                        fontSize: 13, fontWeight: 600, cursor: 'not-allowed'
-                                    }}>
-                                        MODO PRÁCTICA
+                                            sessionStorage.setItem('isPracticeMode', 'false')
+                                            const nextId = getNextNodeId()
+                                            if (nextId) navigate(nextId)
+                                        }}
+                                        style={{
+                                            padding: '14px', borderRadius: 12, background: 'var(--color-brand)',
+                                            border: 'none', color: 'white', fontSize: 13, fontWeight: 700,
+                                            cursor: 'pointer', transition: 'transform 100ms, filter 150ms, box-shadow 150ms',
+                                            boxShadow: '0 4px 14px rgba(124, 92, 252, 0.4)'
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.filter = 'brightness(1.1)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(124, 92, 252, 0.6)' }}
+                                        onMouseLeave={e => { e.currentTarget.style.filter = 'none'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(124, 92, 252, 0.4)' }}
+                                        onMouseDown={e => e.currentTarget.style.transform = 'scale(0.98)'}
+                                        onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                                    >
+                                        EVALUACIÓN
                                     </button>
-                                )}
 
-                                <button
-                                    onClick={() => {
-                                        const name = (inputValues['auth_name'] || '').trim()
-                                        if (!name) {
-                                            setError('Por favor, ingresa tu nombre para continuar.')
-                                            return
-                                        }
-                                        const nextId = getNextNodeId()
-                                        if (nextId) navigate(nextId)
-                                    }}
-                                    style={{
-                                        padding: '14px', borderRadius: 12, background: 'var(--color-brand)',
-                                        border: 'none', color: 'white', fontSize: 13, fontWeight: 700,
-                                        cursor: 'pointer', transition: 'transform 100ms, filter 150ms, box-shadow 150ms',
-                                        boxShadow: '0 4px 14px rgba(124, 92, 252, 0.4)'
-                                    }}
-                                    onMouseEnter={e => { e.currentTarget.style.filter = 'brightness(1.1)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(124, 92, 252, 0.6)' }}
-                                    onMouseLeave={e => { e.currentTarget.style.filter = 'none'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(124, 92, 252, 0.4)' }}
-                                    onMouseDown={e => e.currentTarget.style.transform = 'scale(0.98)'}
-                                    onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-                                >
-                                    EVALUACIÓN
-                                </button>
-
-                                {data.showScores !== false && (
-                                    <button disabled style={{
-                                        padding: '14px', borderRadius: 12, background: 'rgba(255,255,255,0.05)',
-                                        border: '1px solid rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)',
-                                        fontSize: 13, fontWeight: 600, cursor: 'not-allowed'
-                                    }}>
-                                        PUNTAJES
-                                    </button>
-                                )}
+                                    {data.showScores !== false && (
+                                        <button disabled style={{
+                                            padding: '14px', borderRadius: 12, background: 'rgba(255,255,255,0.05)',
+                                            border: '1px solid rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)',
+                                            fontSize: 13, fontWeight: 600, cursor: 'not-allowed'
+                                        }}>
+                                            PUNTAJES
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            ) : (
-                /* ── Main image container ── */
-                <div style={{
-                    position: 'fixed', inset: 0, zIndex: -1,
-                    display: 'flex', flexDirection: 'column', // align to top for scrolling
-                    backgroundColor: '#0a0d12',
-                    overflowY: 'auto', // enable scrolling
-                    overflowX: 'hidden',
-                    transition: 'opacity 280ms ease-out, transform 280ms ease-out, filter 280ms ease-out',
-                    opacity: transitioning ? 0 : 1,
-                    transform: transitioning ? 'scale(0.98)' : 'scale(1)',
-                    filter: transitioning ? 'blur(3px)' : 'blur(0)',
-                }}>
-                    {data.image ? (
-                        <div ref={imgWrapperRef} style={{ position: 'relative', width: '100%', minHeight: '100dvh', margin: '0 auto' }}>
-                            {data.mediaType === 'video' ? (
-                                <video
-                                    src={Array.isArray(data.image) ? data.image[0] : data.image}
-                                    autoPlay
-                                    playsInline
-                                    onEnded={() => {
-                                        const nextId = getNextNodeId()
-                                        if (nextId) navigate(nextId)
-                                        else setSuccess(true)
-                                    }}
-                                    style={{
-                                        width: '100vw', height: '100dvh', display: 'block',
-                                        objectFit: 'cover'
-                                    }}
-                                />
-                            ) : (
-                                <div style={{ position: 'relative', width: '100%', maxWidth: '100%', margin: '0 auto' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                                        {(Array.isArray(data.image) ? data.image : [data.image]).map((src, idx) => (
-                                            <img key={idx} src={src} alt={`screen-${idx}`} draggable={false} style={{ width: '100%', height: 'auto', display: 'block' }} />
-                                        ))}
+                ) : (
+                    /* ── Main image container ── */
+                    <div style={{
+                        position: 'fixed', inset: 0, zIndex: -1,
+                        display: 'flex', flexDirection: 'column', // align to top for scrolling
+                        backgroundColor: '#0a0d12',
+                        overflowY: 'auto', // enable scrolling
+                        overflowX: 'hidden',
+                        transition: 'opacity 280ms ease-out, transform 280ms ease-out, filter 280ms ease-out',
+                        opacity: transitioning ? 0 : 1,
+                        transform: transitioning ? 'scale(0.98)' : 'scale(1)',
+                        filter: transitioning ? 'blur(3px)' : 'blur(0)',
+                    }}>
+                        {data.image ? (
+                            <div ref={imgWrapperRef} style={{ position: 'relative', width: '100%', minHeight: '100dvh', margin: '0 auto' }}>
+                                {data.mediaType === 'video' ? (
+                                    <video
+                                        src={Array.isArray(data.image) ? data.image[0] : data.image}
+                                        autoPlay
+                                        playsInline
+                                        onEnded={() => {
+                                            const nextId = getNextNodeId()
+                                            if (nextId) navigate(nextId)
+                                            else setSuccess(true)
+                                        }}
+                                        style={{
+                                            width: '100vw', height: '100dvh', display: 'block',
+                                            objectFit: 'cover'
+                                        }}
+                                    />
+                                ) : (
+                                    <div style={{ position: 'relative', width: '100%', maxWidth: '100%', margin: '0 auto' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                                            {(Array.isArray(data.image) ? data.image : [data.image]).map((src, idx) => (
+                                                <img key={idx} src={src} alt={`screen-${idx}`} draggable={false} style={{ width: '100%', height: 'auto', display: 'block' }} />
+                                            ))}
+                                        </div>
+                                        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                                            {renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
+                                        </div>
                                     </div>
-                                    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-                                        {renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
-                                    </div>
-                                </div>
-                            )}
-                            {data.mediaType === 'video' && renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
-                        </div>
-                    ) : (
-                        <div ref={imgWrapperRef} style={{ position: 'relative', width: '100vw', height: '100dvh', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <span style={{ fontSize: 14, color: 'var(--color-text-muted)', pointerEvents: 'none' }}>Sin imagen en este nodo</span>
-                            {renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
-                        </div>
-                    )}
-                </div>
-            )}
+                                )}
+                                {data.mediaType === 'video' && renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
+                            </div>
+                        ) : (
+                            <div ref={imgWrapperRef} style={{ position: 'relative', width: '100vw', height: '100dvh', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <span style={{ fontSize: 14, color: 'var(--color-text-muted)', pointerEvents: 'none' }}>Sin imagen en este nodo</span>
+                                {renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, handleInputSubmit, handleInputChange, inputValues, setInputValues, inputRefs)}
+                            </div>
+                        )}
+                    </div>
+                )
+            }
 
-        </div>
+        </div >
     )
 }

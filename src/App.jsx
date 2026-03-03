@@ -18,6 +18,7 @@ import FocusMode from './components/FocusMode'
 import ImageEditor from './components/ImageEditor'
 import ScrollImageBuilder from './components/ScrollImageBuilder'
 import AuthNode from './components/AuthNode'
+import ButtonEdge from './components/ButtonEdge'
 
 import { GitBranch, Plus, Play, Settings2, Trash2, Layers, Download, Maximize2, Save, Upload, Image as ImageIcon, UserCircle } from 'lucide-react'
 import { exportSimulator } from './utils/exporter'
@@ -25,9 +26,10 @@ import { TRIGGER_COLORS } from './utils/triggers'
 
 // Must be stable — defined outside component
 const nodeTypes = { screenNode: ScreenNode, authNode: AuthNode }
+const edgeTypes = { buttonEdge: ButtonEdge }
 
 const edgeDefaults = {
-  type: 'smoothstep',
+  type: 'buttonEdge',
   animated: true,
   markerEnd: { type: MarkerType.ArrowClosed, color: '#7c5cfc' },
   style: { stroke: '#7c5cfc', strokeWidth: 1.5, opacity: 0.6 },
@@ -55,9 +57,17 @@ export default function App() {
   const [isEditingImage, setIsEditingImage] = useState(null) // null or index
   const [showImageBuilder, setShowImageBuilder] = useState(false)
 
+  const deleteEdge = useCallback((id) => {
+    setEdges((eds) => eds.filter((e) => e.id !== id))
+  }, [setEdges])
+
   const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge({ ...params, ...edgeDefaults }, eds)),
-    [setEdges]
+    (params) => setEdges((eds) => addEdge({
+      ...params,
+      ...edgeDefaults,
+      data: { onDelete: deleteEdge }
+    }, eds)),
+    [setEdges, deleteEdge]
   )
 
   const handleExport = useCallback(async () => {
@@ -215,7 +225,11 @@ export default function App() {
         }
       })
     })
-    return [...edges, ...computedEdges]
+    const manualEdges = edges.map(e => ({
+      ...e,
+      data: { ...e.data, onDelete: deleteEdge }
+    }))
+    return [...manualEdges, ...computedEdges]
   }, [nodes, edges])
 
   // ── Styles ──────────────────────────────────────────────────────
@@ -375,6 +389,7 @@ export default function App() {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             onNodeClick={onNodeClick}
             onPaneClick={onPaneClick}
             fitView

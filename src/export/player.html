@@ -480,6 +480,17 @@
                     </svg>
                     &nbsp;¡Completado!
                 </div>
+
+                <div id="ui-practice-guide"
+                    style="display: none; margin-top: 16px; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08);">
+                    <div
+                        style="font-size: 10px; font-weight: 700; letter-spacing: 0.05em; color: var(--color-brand); text-transform: uppercase;">
+                        Guía de Práctica
+                    </div>
+                    <div id="ui-practice-guide-content" style="display: flex; flex-direction: column; gap: 6px;">
+                        <!-- Checklist injected here -->
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -638,6 +649,54 @@
                 }, 280);
             };
 
+            const renderPracticeGuide = (triggers) => {
+                const guideContainer = document.getElementById("ui-practice-guide");
+                const guideContent = document.getElementById("ui-practice-guide-content");
+
+                if (sessionStorage.getItem('isPracticeMode') === 'true' && getNode(currentNodeId)?.type !== 'authNode') {
+                    guideContainer.style.display = 'flex';
+
+                    const guideTriggers = triggers.filter(t => !t.isOptional);
+                    if (guideTriggers.length === 0) {
+                        guideContent.innerHTML = `<div style="font-size: 11px; color: var(--color-text-muted); font-style: italic;">No hay acciones obligatorias en esta pantalla.</div>`;
+                    } else {
+                        let html = '';
+                        guideTriggers.forEach((t, index) => {
+                            const done = completedTriggers.has(t.id);
+
+                            let autoHint = t.hint;
+                            if (!autoHint) {
+                                switch (t.type) {
+                                    case 'click': autoHint = "Haz clic en la zona indicada."; break;
+                                    case 'double_click': autoHint = "Haz doble clic en la zona indicada."; break;
+                                    case 'input': autoHint = "Completa el campo de texto."; break;
+                                    case 'dropdown': autoHint = "Selecciona la opción correcta en la lista."; break;
+                                    case 'dependent_dropdown': autoHint = "Selecciona la subcategoría correcta."; break;
+                                    case 'keypress': autoHint = `Presiona la tecla ${t.keyCode}.`; break;
+                                    case 'scroll_area': autoHint = "Desplaza el contenido hacia abajo."; break;
+                                    default: autoHint = "Realiza la acción requerida.";
+                                }
+                            }
+
+                            html += `
+                                <div style="display: flex; align-items: flex-start; gap: 8px; opacity: ${done ? '0.4' : '1'}; transition: all 300ms ease;">
+                                    <div style="margin-top: 2px; width: 14px; height: 14px; border-radius: 50%; border: 1px solid ${done ? '#5ac98a' : 'var(--color-border-strong)'}; background: ${done ? 'rgba(90, 201, 138, 0.2)' : 'transparent'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                        ${done ? '<span style="color: #5ac98a; font-size: 10px;">✓</span>' : ''}
+                                    </div>
+                                    <div style="font-size: 12px; color: ${done ? 'var(--color-text-muted)' : 'var(--color-text-primary)'}; text-decoration: ${done ? 'line-through' : 'none'}; line-height: 1.4;">
+                                        <span style="font-weight: 600; margin-right: 4px;">Paso ${index + 1}:</span>
+                                        ${autoHint}
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        guideContent.innerHTML = html;
+                    }
+                } else {
+                    guideContainer.style.display = 'none';
+                }
+            };
+
             const handleTriggerComplete = (tId, triggers) => {
                 completedTriggers.add(tId);
                 render(); // Re-render state to update badges/blocked states
@@ -649,7 +708,7 @@
                     return;
                 }
 
-                const allDone = triggers.every(t => completedTriggers.has(t.id));
+                const allDone = triggers.every(t => t.isOptional || completedTriggers.has(t.id));
                 if (allDone) {
                     setTimeout(() => navigate(getNextNodeId()), 350);
                 }
@@ -660,6 +719,9 @@
                 const data = node.data;
                 const triggers = normalizeTriggers(data);
                 const stepIndex = order.indexOf(currentNodeId);
+
+                // Render Practice Guide
+                renderPracticeGuide(triggers);
 
                 // Header
                 elScreenName.textContent = data.label || "Sin nombre";
@@ -672,7 +734,7 @@
                     else if (i < stepIndex) cls += " done";
                     pillsHtml += `<div class="${cls}"></div>`;
                 }
-                pillsHtml += `<span class="step-text">${stepIndex + 1}/${order.length}</span></div>`;
+                pillsHtml += `<span class="step-text">${stepIndex + 1} / ${order.length}</span></div>`;
                 elStepIndicator.innerHTML = pillsHtml;
 
                 // Image / Canvas
@@ -698,16 +760,24 @@
                             <div style="width: 420px; max-width: 90%; padding: 40px; background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05) inset; display: flex; flex-direction: column; gap: 24px; text-align: center;">
                                 <div>
                                     <div style="font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 8px; letter-spacing: -0.02em;">${title}</div>
-                                    <div style="font-size: 13px; color: #9ca3af; line-height: 1.6;">${objective}</div>
+                                    <div style="font-size: 13px; color: var(--color-text-secondary); line-height: 1.6;">
+                                        ${objective}
+                                    </div>
                                 </div>
                                 <div style="display: flex; flex-direction: column; gap: 16px;">
                                     <div style="position: relative;">
-                                        <input type="text" id="auth-name-input" placeholder="Tu Nombre..." style="width: 100%; padding: 14px 16px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; color: white; font-size: 14px; outline: none; transition: border-color 200ms; text-align: center; font-family: inherit; box-sizing: border-box;" />
-                                        <div id="auth-error-msg" style="position: absolute; top: -24px; left: 0; right: 0; color: #ef4444; font-size: 11px; font-weight: 500; display: none;"></div>
+                                        <input type="text" id="ui-auth-name" placeholder="Tu Nombre..." style="width: 100%; padding: 14px 16px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; color: white; font-size: 14px; outline: none; transition: border-color 200ms; text-align: center; box-sizing: border-box;" />
+                                        <div id="ui-auth-error" style="position: absolute; top: -24px; left: 0; right: 0; color: #ef4444; font-size: 11px; font-weight: 500; display: none;">Por favor, ingresa tu nombre para continuar.</div>
                                     </div>
                                     <div style="display: flex; flex-direction: column; gap: 10px;">
-                                        ${showPractice ? `<button disabled style="padding: 14px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05); color: rgba(255,255,255,0.4); font-size: 13px; font-weight: 600; cursor: not-allowed; font-family: inherit;">MODO PRÁCTICA</button>` : ''}
-                                        <button id="auth-eval-btn" style="padding: 14px; border-radius: 12px; background: var(--color-brand); border: none; color: white; font-size: 13px; font-weight: 700; cursor: pointer; transition: transform 100ms, filter 150ms, box-shadow 150ms; box-shadow: 0 4px 14px rgba(124, 92, 252, 0.4); font-family: inherit;">EVALUACIÓN</button>
+                                        ${showPractice ? `
+                                        <button id="ui-auth-practice" style="padding: 14px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: white; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 150ms;" onmouseenter="this.style.background='rgba(255,255,255,0.1)'" onmouseleave="this.style.background='rgba(255,255,255,0.05)'">
+                                            MODO PRÁCTICA
+                                        </button>
+                                        ` : ''}
+                                        <button id="ui-auth-eval" style="padding: 14px; border-radius: 12px; background: var(--color-brand); border: none; color: white; font-size: 13px; font-weight: 700; cursor: pointer; transition: transform 100ms, filter 150ms, box-shadow 150ms;" onmouseenter="this.style.filter='brightness(1.1)'; this.style.boxShadow='0 0 16px rgba(124, 92, 252, 0.4)'" onmouseleave="this.style.filter='none'; this.style.boxShadow='none'">
+                                            EVALUACIÓN
+                                        </button>
                                         ${showScores ? `<button disabled style="padding: 14px; border-radius: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05); color: rgba(255,255,255,0.4); font-size: 13px; font-weight: 600; cursor: not-allowed; font-family: inherit;">PUNTAJES</button>` : ''}
                                     </div>
                                 </div>
@@ -729,7 +799,8 @@
                                 <div style="position: relative; width: 100%; max-width: 100%; margin: 0 auto;">
                                     <div style="display: flex; flex-direction: column; width: 100%;">
                                         ${imgElements}
-                                    <div id="ui-triggers-container" style="position: absolute; inset: 0;"></div>
+                                        <div id="ui-triggers-container" style="position: absolute; inset: 0;"></div>
+                                    </div>
                                 </div>
                             `;
                         }
@@ -742,42 +813,24 @@
 
                 // Auth Node Logic attachment
                 if (node.type === 'authNode') {
-                    const inputEl = document.getElementById('auth-name-input');
-                    const errEl = document.getElementById('auth-error-msg');
-                    const btnEl = document.getElementById('auth-eval-btn');
+                    const inputName = document.getElementById("ui-auth-name");
+                    const btnEval = document.getElementById("ui-auth-eval");
+                    const btnPractice = document.getElementById("ui-auth-practice");
+                    const errorMsg = document.getElementById("ui-auth-error");
 
-                    if (inputValues['auth_name']) {
-                        inputEl.value = inputValues['auth_name'];
-                    }
-
-                    const attemptSubmit = () => {
-                        const name = inputEl.value.trim();
-                        if (!name) {
-                            errEl.textContent = 'Por favor, ingresa tu nombre para continuar.';
-                            errEl.style.display = 'block';
-                            inputEl.style.borderColor = 'rgba(239, 68, 68, 0.5)';
-                        } else {
-                            errEl.style.display = 'none';
-                            inputEl.style.borderColor = 'rgba(255,255,255,0.15)';
-                            inputValues['auth_name'] = name;
-                            const nextId = getNextNodeId();
-                            if (nextId) navigate(nextId);
+                    const runValidationAndNavigate = (isPractice) => {
+                        const val = inputName.value.trim();
+                        if (!val) {
+                            errorMsg.style.display = "block";
+                            inputName.style.borderColor = "rgba(239, 68, 68, 0.5)";
+                            return;
                         }
+                        sessionStorage.setItem('isPracticeMode', isPractice ? 'true' : 'false');
+                        setTimeout(() => navigate(getNextNodeId()), 100);
                     };
 
-                    inputEl.addEventListener('input', (e) => {
-                        errEl.style.display = 'none';
-                        e.target.style.borderColor = 'rgba(255,255,255,0.15)';
-                        inputValues['auth_name'] = e.target.value;
-                    });
-                    inputEl.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter') attemptSubmit();
-                    });
-                    btnEl.addEventListener('click', attemptSubmit);
-                    btnEl.addEventListener('mouseenter', e => { e.currentTarget.style.filter = 'brightness(1.1)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(124, 92, 252, 0.6)'; });
-                    btnEl.addEventListener('mouseleave', e => { e.currentTarget.style.filter = 'none'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(124, 92, 252, 0.4)'; });
-                    btnEl.addEventListener('mousedown', e => e.currentTarget.style.transform = 'scale(0.98)');
-                    btnEl.addEventListener('mouseup', e => e.currentTarget.style.transform = 'scale(1)');
+                    if (btnEval) btnEval.addEventListener('click', () => runValidationAndNavigate(false));
+                    if (btnPractice) btnPractice.addEventListener('click', () => runValidationAndNavigate(true));
                 }
 
                 // Handle video auto-advance and forced autoplay
@@ -802,14 +855,14 @@
                     const isBlocked = depsArray.length > 0 && depsArray.some(depId => !completedTriggers.has(depId));
 
                     let el = document.createElement("div");
-                    el.className = `trigger trigger-${t.type}`;
+                    el.className = `trigger trigger - ${t.type} `;
                     if (isDone) el.classList.add("done");
                     else if (isBlocked) el.classList.add("blocked");
 
-                    el.style.left = `${hs.x}%`;
-                    el.style.top = `${hs.y}%`;
-                    el.style.width = `${hs.w}%`;
-                    el.style.height = `${hs.h}%`;
+                    el.style.left = `${hs.x}% `;
+                    el.style.top = `${hs.y}% `;
+                    el.style.width = `${hs.w}% `;
+                    el.style.height = `${hs.h}% `;
 
                     if (t.hidden) {
                         el.style.background = 'transparent';
@@ -818,7 +871,7 @@
 
                     if (t.type === 'click' || t.type === 'double_click') {
                         if (isDone) {
-                            el.innerHTML = t.hidden ? '' : `<span class="trigger-check">✓</span>`;
+                            el.innerHTML = t.hidden ? '' : `< span class="trigger-check" >✓</span > `;
                         } else {
                             const handler = () => {
                                 if (!isTransitioning && !isDone && !isBlocked) {
@@ -854,7 +907,7 @@
                                 render();
                                 // Re-focus the input since render destroyed it
                                 setTimeout(() => {
-                                    const newInp = document.querySelector(`input[data-trigger-id="${t.id}"]`)
+                                    const newInp = document.querySelector(`input[data - trigger - id= "${t.id}"]`)
                                     if (newInp) {
                                         newInp.focus();
                                         newInp.setSelectionRange(newInp.value.length, newInp.value.length);
@@ -984,7 +1037,7 @@
                                 if (t.textColor) icon.style.color = t.textColor;
                             } else if (!t.hidden) {
                                 const arrowColor = t.textColor || '#e2eaf4';
-                                icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${arrowColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>`;
+                                icon.innerHTML = `< svg xmlns = "http://www.w3.org/2000/svg" width = "14" height = "14" viewBox = "0 0 24 24" fill = "none" stroke = "${arrowColor}" stroke - width="2" stroke - linecap="round" stroke - linejoin="round" > <path d="m6 9 6 6 6-6" /></svg > `;
                             }
                             el.appendChild(icon);
                         }
@@ -1125,15 +1178,15 @@
                                 if (t.textColor) icon.style.color = t.textColor;
                             } else if (!t.hidden) {
                                 const arrowColor = t.textColor || '#e2eaf4';
-                                icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${arrowColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>`;
+                                icon.innerHTML = \`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="\${arrowColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>\`;
                             }
                             el.appendChild(icon);
                         }
                     } else if (t.type === 'keypress') {
                         if (isDone) {
-                            el.innerHTML = t.hidden ? '' : `<span class="trigger-check">✓</span>`;
+                            el.innerHTML = t.hidden ? '' : `< span class="trigger-check" >✓</span > `;
                         } else if (!t.hidden) {
-                            el.innerHTML = `<span style="font-size:clamp(10px, 1vw, 14px);font-weight:700;color:var(--color-trigger-keypress-border);background:rgba(10,13,18,0.5);padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:0.05em">${t.keyCode || '?'}</span>`;
+                            el.innerHTML = `< span style = "font-size:clamp(10px, 1vw, 14px);font-weight:700;color:var(--color-trigger-keypress-border);background:rgba(10,13,18,0.5);padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:0.05em" > ${ t.keyCode || '?' }</span > `;
                         }
                     } else if (t.type === 'scroll_area') {
                         el.style.border = t.hidden ? 'none' : '1px dashed #10b981';
@@ -1143,9 +1196,9 @@
                         el.style.background = 'transparent';
 
                         if (t.contentImage) {
-                            el.innerHTML = `<img src="${t.contentImage}" alt="Contenido scroll" style="width: 100%; height: auto; display: block;" draggable="false" />`;
+                            el.innerHTML = `< img src = "${t.contentImage}" alt = "Contenido scroll" style = "width: 100%; height: auto; display: block;" draggable = "false" /> `;
                         } else if (!t.hidden) {
-                            el.innerHTML = `<div style="padding: 10px; text-align: center; color: #10b981; font-size: 11px; background: rgba(10,13,18,0.8); min-height: 100%;">[Área de Scroll sin imagen]</div>`;
+                            el.innerHTML = `< div style = "padding: 10px; text-align: center; color: #10b981; font-size: 11px; background: rgba(10,13,18,0.8); min-height: 100%;" > [Área de Scroll sin imagen]</div > `;
                         }
                     }
 
@@ -1162,15 +1215,18 @@
                 if (triggers.length > 1) {
                     let reqHtml = triggers.map(t => {
                         const done = completedTriggers.has(t.id);
-                        return `<div class="trigger-badge ${done ? 'done' : ''}">
-              <span class="badge-icon">${done ? '✓' : '○'}</span>
-              <span class="badge-label">${t.type}</span>
-            </div>`;
+                        return `< div class="trigger-badge ${done ? 'done' : ''}" >
+                          <span class="badge-icon">${done ? '✓' : '○'}</span>
+                          <span class="badge-label">${t.type}</span>
+                        </div > `;
                     }).join("");
 
-                    const remaining = triggers.length - completedTriggers.size;
-                    if (remaining > 0) {
-                        reqHtml += `<span class="remaining-text">${remaining} restante${remaining !== 1 ? 's' : ''}</span>`;
+                    const reqTriggers = triggers.filter(t => !t.isOptional);
+                    const reqCompleted = reqTriggers.filter(t => completedTriggers.has(t.id)).length;
+                    
+                    if (reqCompleted < reqTriggers.length) {
+                        const remaining = reqTriggers.length - reqCompleted;
+                        reqHtml += `< span class="remaining-text" > ${ remaining } restante${ remaining !== 1 ? 's' : '' }</span >`;
                     }
                     elProgressRow.innerHTML = reqHtml;
                 } else {

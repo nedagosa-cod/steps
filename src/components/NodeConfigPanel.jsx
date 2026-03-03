@@ -221,6 +221,42 @@ function TriggerCard({
                         </div>
                     </div>
 
+                    {/* Obligatorio */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: -4 }}>
+                        <input
+                            type="checkbox"
+                            checked={trigger.isOptional !== true}
+                            onChange={e => onUpdate({ isOptional: !e.target.checked })}
+                            id={`opt-${trigger.id}`}
+                            style={{ accentColor: colors.label, cursor: 'pointer' }}
+                        />
+                        <label htmlFor={`opt-${trigger.id}`} style={{ fontSize: 11, color: 'var(--color-text-secondary)', cursor: 'pointer' }}>
+                            Obligatorio para avanzar de pantalla
+                        </label>
+                    </div>
+
+                    {/* Practice Mode Hint */}
+                    <div>
+                        <FieldLabel>Guía / Pista (Modo Práctica)</FieldLabel>
+                        <textarea
+                            value={trigger.hint || ''}
+                            onChange={e => onUpdate({ hint: e.target.value })}
+                            placeholder="Ej: Haz clic en el botón 'Guardar' para continuar..."
+                            rows={2}
+                            style={{
+                                width: '100%', resize: 'vertical',
+                                background: 'var(--color-control)',
+                                border: '1px solid var(--color-border)',
+                                borderRadius: 6, padding: '6px 8px',
+                                fontSize: 11, color: 'var(--color-text-primary)', outline: 'none',
+                                fontFamily: 'inherit',
+                                transition: 'border-color 150ms ease-out',
+                            }}
+                            onFocus={e => e.target.style.borderColor = colors.label}
+                            onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
+                        />
+                    </div>
+
                     {/* Validation text — only for input type */}
                     {trigger.type === 'input' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
