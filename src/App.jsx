@@ -20,10 +20,11 @@ import ScrollImageBuilder from './components/ScrollImageBuilder'
 import AuthNode from './components/AuthNode'
 import ButtonEdge from './components/ButtonEdge'
 
-import { GitBranch, Plus, Play, Settings2, Trash2, Layers, Download, Maximize2, Save, Upload, Image as ImageIcon, UserCircle, Zap } from 'lucide-react'
+import { GitBranch, Plus, Play, Settings2, Trash2, Layers, Download, Maximize2, Save, Upload, Image as ImageIcon, UserCircle, Zap, Undo2, Redo2 } from 'lucide-react'
 import { exportSimulator } from './utils/exporter'
 import { exportAsExe } from './utils/exporterExe'
 import { TRIGGER_COLORS } from './utils/triggers'
+import useHistory from './hooks/useHistory'
 
 // Must be stable — defined outside component
 const nodeTypes = { screenNode: ScreenNode, authNode: AuthNode }
@@ -63,6 +64,14 @@ export default function App() {
   const deleteEdge = useCallback((id) => {
     setEdges((eds) => eds.filter((e) => e.id !== id))
   }, [setEdges])
+
+  // Undo / Redo — must be after deleteEdge so patchEdge can reference it
+  const patchEdge = useCallback((edge) => ({
+    ...edge,
+    data: { ...edge.data, onDelete: deleteEdge },
+  }), [deleteEdge])
+
+  const { undo, redo, canUndo, canRedo } = useHistory(nodes, edges, setNodes, setEdges, { patchEdge })
 
   const onConnect = useCallback(
     (params) => setEdges((eds) => addEdge({
@@ -343,6 +352,16 @@ export default function App() {
                 Añade una pantalla para empezar
               </span>
             )}
+
+            {/* Undo / Redo */}
+            <div style={{ display: 'flex', gap: 2, marginRight: 4 }}>
+              <GhostBtn onClick={undo} disabled={!canUndo} title="Deshacer (Ctrl+Z)">
+                <Undo2 size={13} />
+              </GhostBtn>
+              <GhostBtn onClick={redo} disabled={!canRedo} title="Rehacer (Ctrl+Y)">
+                <Redo2 size={13} />
+              </GhostBtn>
+            </div>
 
             {selectedNode && !isFocusMode && (
               <GhostBtn onClick={() => setIsFocusMode(true)}>
