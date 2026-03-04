@@ -884,7 +884,7 @@ function TriggerCard({
 }
 
 /* ── Main component ── */
-export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage }) {
+export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage, activeTab = 'node' }) {
     const fileInputRef = useRef(null)
     const [draggedIdx, setDraggedIdx] = useState(null)
     const [dragOverIdx, setDragOverIdx] = useState(null)
@@ -1061,274 +1061,280 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage
             display: 'flex', flexDirection: 'column', gap: 12,
             padding: 14, height: '100%', overflowY: 'auto',
         }}>
-            {/* Set as Start Node */}
-            <button
-                onClick={() => update({ isStartNode: true })}
-                disabled={data.isStartNode}
-                style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    width: '100%', padding: '8px 12px', borderRadius: 7,
-                    border: data.isStartNode ? '1px solid rgba(46, 165, 103, 0.4)' : '1px solid var(--color-border)',
-                    background: data.isStartNode ? 'rgba(46, 165, 103, 0.15)' : 'transparent',
-                    color: data.isStartNode ? '#5ac98a' : 'var(--color-text-secondary)',
-                    fontSize: 11, fontWeight: data.isStartNode ? 700 : 500,
-                    cursor: data.isStartNode ? 'default' : 'pointer',
-                    transition: 'all 150ms ease-out',
-                }}
-            >
-                <div style={{
-                    width: 14, height: 14, borderRadius: '50%',
-                    background: data.isStartNode ? '#5ac98a' : 'transparent',
-                    border: data.isStartNode ? 'none' : '1px solid var(--color-border-strong)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                    {data.isStartNode && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
-                </div>
-                {data.isStartNode ? 'Pantalla Inicial' : 'Establecer como inicial'}
-            </button>
-
-            {/* Name */}
-            <div>
-                <FieldLabel>Nombre</FieldLabel>
-                <TextInput
-                    value={data.label || ''}
-                    onChange={e => update({ label: e.target.value })}
-                    placeholder="Pantalla sin nombre"
-                />
-            </div>
-
-            <Divider label="Fondo (Imagen / Video)" />
-
-            {/* Media upload */}
-            <input ref={fileInputRef} type="file" accept="image/*,video/mp4,video/webm"
-                style={{ display: 'none' }} onChange={handleMediaUpload} />
-
-            {data.image ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {/* Render Video or Stacked Images */}
-                    {data.mediaType === 'video' ? (
-                        <div style={{ position: 'relative' }}>
-                            <button
-                                onClick={() => fileInputRef.current?.click()}
-                                style={{
-                                    position: 'relative', borderRadius: 7, overflow: 'hidden',
-                                    border: '1px solid var(--color-border)', cursor: 'pointer',
-                                    display: 'block', width: '100%', background: '#000', padding: 0,
-                                }}
-                            >
-                                <video src={Array.isArray(data.image) ? data.image[0] : data.image} style={{ width: '100%', height: 160, objectFit: 'contain', display: 'block' }} muted loop onMouseOver={e => e.target.play()} onMouseOut={e => e.target.pause()} />
-                                <div
-                                    style={{
-                                        position: 'absolute', inset: 0, background: 'rgba(10,13,18,0.65)',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                                        opacity: 0, transition: 'opacity 150ms ease-out',
-                                    }}
-                                    onMouseEnter={e => e.currentTarget.style.opacity = 1}
-                                    onMouseLeave={e => e.currentTarget.style.opacity = 0}
-                                >
-                                    <Video size={14} style={{ color: '#e2eaf4' }} />
-                                    <span style={{ fontSize: 11, fontWeight: 500, color: '#e2eaf4' }}>Cambiar Video</span>
-                                </div>
-                            </button>
-                        </div>
-                    ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            {/* Stacked Images List */}
-                            {imageSegments.map((src, idx) => (
-                                <div key={idx} style={{ position: 'relative', borderRadius: 7, overflow: 'hidden', border: '1px solid var(--color-border)', background: '#000' }}>
-                                    <img src={src} alt={`segment-${idx}`} style={{ width: '100%', height: imageSegments.length > 1 ? 100 : 160, objectFit: 'cover', display: 'block', opacity: 0.8 }} />
-
-                                    {/* Edit Button */}
-                                    <button
-                                        onClick={() => onEditImage(idx)}
-                                        style={{
-                                            position: 'absolute', top: 8, left: 8,
-                                            background: 'var(--color-brand)', border: 'none',
-                                            borderRadius: 4, padding: '4px 8px',
-                                            display: 'flex', alignItems: 'center', gap: 6,
-                                            color: 'white', fontSize: 11, fontWeight: 600,
-                                            cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-                                            zIndex: 2
-                                        }}
-                                    >
-                                        ✏️ Editar {imageSegments.length > 1 ? `Tramo ${idx + 1}` : ''}
-                                    </button>
-
-                                    {/* Delete Button */}
-                                    <button
-                                        onClick={() => removeImageSegment(idx)}
-                                        style={{
-                                            position: 'absolute', top: 8, right: 8,
-                                            background: 'rgba(239, 68, 68, 0.9)', border: 'none',
-                                            borderRadius: 4, padding: '4px',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            color: 'white', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-                                            zIndex: 2
-                                        }}
-                                        title="Eliminar este tramo"
-                                    >
-                                        <Trash2 size={12} />
-                                    </button>
-
-                                    <div style={{
-                                        position: 'absolute', bottom: 6, right: 8,
-                                        background: 'rgba(0,0,0,0.7)', padding: '2px 6px', borderRadius: 4,
-                                        fontSize: 10, color: '#fff', fontWeight: 600
-                                    }}>
-                                        Tramo {idx + 1}
-                                    </div>
-                                </div>
-                            ))}
-
-                            {/* Add Image Below Button */}
-                            <button
-                                onClick={() => fileInputRef.current?.click()}
-                                style={{
-                                    width: '100%', height: 42, border: '1px dashed var(--color-border)',
-                                    borderRadius: 7, background: 'var(--color-surface)', cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                                    transition: 'all 150ms ease-out', marginTop: 4,
-                                }}
-                                onMouseEnter={e => {
-                                    e.currentTarget.style.borderColor = 'var(--color-border-strong)'
-                                    e.currentTarget.style.background = 'var(--color-raised)'
-                                }}
-                                onMouseLeave={e => {
-                                    e.currentTarget.style.borderColor = 'var(--color-border)'
-                                    e.currentTarget.style.background = 'var(--color-surface)'
-                                }}
-                            >
-                                <Plus size={14} style={{ color: 'var(--color-text-secondary)' }} />
-                                <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontWeight: 500 }}>Añadir imagen debajo</span>
-                            </button>
-                        </div>
-                    )}
-                </div>
-            ) : (
+            {activeTab === 'node' && (<>
+                {/* Set as Start Node */}
                 <button
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => update({ isStartNode: true })}
+                    disabled={data.isStartNode}
                     style={{
-                        width: '100%', height: 84, border: '1px dashed var(--color-border)',
-                        borderRadius: 7, background: 'transparent', cursor: 'pointer',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center',
-                        justifyContent: 'center', gap: 7, transition: 'all 150ms ease-out',
-                    }}
-                    onMouseEnter={e => {
-                        e.currentTarget.style.borderColor = 'var(--color-border-strong)'
-                        e.currentTarget.style.background = 'var(--color-brand-dim)'
-                    }}
-                    onMouseLeave={e => {
-                        e.currentTarget.style.borderColor = 'var(--color-border)'
-                        e.currentTarget.style.background = 'transparent'
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        width: '100%', padding: '8px 12px', borderRadius: 7,
+                        border: data.isStartNode ? '1px solid rgba(46, 165, 103, 0.4)' : '1px solid var(--color-border)',
+                        background: data.isStartNode ? 'rgba(46, 165, 103, 0.15)' : 'transparent',
+                        color: data.isStartNode ? '#5ac98a' : 'var(--color-text-secondary)',
+                        fontSize: 11, fontWeight: data.isStartNode ? 700 : 500,
+                        cursor: data.isStartNode ? 'default' : 'pointer',
+                        transition: 'all 150ms ease-out',
                     }}
                 >
-                    <Upload size={16} style={{ color: 'var(--color-text-muted)' }} />
-                    <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Subir imagen o video</span>
+                    <div style={{
+                        width: 14, height: 14, borderRadius: '50%',
+                        background: data.isStartNode ? '#5ac98a' : 'transparent',
+                        border: data.isStartNode ? 'none' : '1px solid var(--color-border-strong)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                        {data.isStartNode && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
+                    </div>
+                    {data.isStartNode ? 'Pantalla Inicial' : 'Establecer como inicial'}
                 </button>
-            )}
 
-            {/* Triggers */}
-            <Divider label={triggers.length > 0 ? `Triggers · ${triggers.length}` : 'Triggers'} />
+                {/* Name */}
+                <div>
+                    <FieldLabel>Nombre</FieldLabel>
+                    <TextInput
+                        value={data.label || ''}
+                        onChange={e => update({ label: e.target.value })}
+                        placeholder="Pantalla sin nombre"
+                    />
+                </div>
+            </>)}
 
-            {triggers.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {triggers.map((trigger, idx) => {
-                        const isExpanded = expandedState[trigger.id] !== false // Default true
-                        const isDragged = draggedIdx === idx
-                        const isDragOver = dragOverIdx === idx
+            {activeTab === 'media' && (<>
+                <Divider label="Fondo (Imagen / Video)" />
 
-                        const draggableProps = {
-                            draggable: true,
-                            onDragStart: (e) => {
-                                setDraggedIdx(idx)
-                                e.dataTransfer.effectAllowed = 'move'
-                                // Ghost image trick for cleaner drag
-                                const el = e.currentTarget
-                                e.dataTransfer.setDragImage(el, 20, 20)
-                            },
-                            onDragOver: (e) => {
-                                e.preventDefault() // Necessary to allow dropping
-                                if (draggedIdx !== null && draggedIdx !== idx) {
-                                    setDragOverIdx(idx)
-                                }
-                            },
-                            onDragLeave: () => {
-                                setDragOverIdx(null)
-                            },
-                            onDrop: (e) => {
-                                e.preventDefault()
-                                if (draggedIdx !== null && draggedIdx !== idx) {
-                                    const newTriggers = [...triggers]
-                                    const [draggedItem] = newTriggers.splice(draggedIdx, 1)
-                                    newTriggers.splice(idx, 0, draggedItem)
-                                    setTriggers(newTriggers)
-                                }
-                                setDraggedIdx(null)
-                                setDragOverIdx(null)
-                            },
-                            onDragEnd: () => {
-                                setDraggedIdx(null)
-                                setDragOverIdx(null)
-                            },
-                            style: {
-                                opacity: isDragged ? 0.4 : 1,
-                                outline: isDragOver ? '2px solid var(--color-brand)' : 'none',
-                                outlineOffset: 2,
-                                transform: isDragOver ? (draggedIdx < idx ? 'translateY(4px)' : 'translateY(-4px)') : 'none',
-                                transition: 'transform 150ms ease, outline 150ms ease, opacity 150ms ease',
-                            }
-                        }
+                {/* Media upload */}
+                <input ref={fileInputRef} type="file" accept="image/*,video/mp4,video/webm"
+                    style={{ display: 'none' }} onChange={handleMediaUpload} />
 
-                        return (
-                            <React.Fragment key={trigger.id}>
-                                <TriggerCard
-                                    trigger={trigger}
-                                    index={idx}
-                                    allTriggers={triggers}
-                                    nodes={nodes}
-                                    onUpdate={patch => updateTrigger(idx, patch)}
-                                    onDelete={() => deleteTrigger(idx)}
-                                    isExpanded={isExpanded}
-                                    onToggleExpand={() => setExpandedState(prev => ({ ...prev, [trigger.id]: !isExpanded }))}
-                                    draggableProps={draggableProps}
-                                />
-                                {idx < triggers.length - 1 && (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: isDragged ? 0.4 : 1 }}>
-                                        <div style={{ flex: 1, height: 1, background: 'var(--color-border-subtle)' }} />
-                                        <span style={{ fontSize: 9, color: 'var(--color-text-muted)', fontWeight: 600, letterSpacing: '0.08em' }}>LUEGO</span>
-                                        <div style={{ flex: 1, height: 1, background: 'var(--color-border-subtle)' }} />
+                {data.image ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {/* Render Video or Stacked Images */}
+                        {data.mediaType === 'video' ? (
+                            <div style={{ position: 'relative' }}>
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    style={{
+                                        position: 'relative', borderRadius: 7, overflow: 'hidden',
+                                        border: '1px solid var(--color-border)', cursor: 'pointer',
+                                        display: 'block', width: '100%', background: '#000', padding: 0,
+                                    }}
+                                >
+                                    <video src={Array.isArray(data.image) ? data.image[0] : data.image} style={{ width: '100%', height: 160, objectFit: 'contain', display: 'block' }} muted loop onMouseOver={e => e.target.play()} onMouseOut={e => e.target.pause()} />
+                                    <div
+                                        style={{
+                                            position: 'absolute', inset: 0, background: 'rgba(10,13,18,0.65)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                            opacity: 0, transition: 'opacity 150ms ease-out',
+                                        }}
+                                        onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                                        onMouseLeave={e => e.currentTarget.style.opacity = 0}
+                                    >
+                                        <Video size={14} style={{ color: '#e2eaf4' }} />
+                                        <span style={{ fontSize: 11, fontWeight: 500, color: '#e2eaf4' }}>Cambiar Video</span>
                                     </div>
-                                )}
-                            </React.Fragment>
-                        )
-                    })}
-                </div>
-            )}
+                                </button>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                {/* Stacked Images List */}
+                                {imageSegments.map((src, idx) => (
+                                    <div key={idx} style={{ position: 'relative', borderRadius: 7, overflow: 'hidden', border: '1px solid var(--color-border)', background: '#000' }}>
+                                        <img src={src} alt={`segment-${idx}`} style={{ width: '100%', height: imageSegments.length > 1 ? 100 : 160, objectFit: 'cover', display: 'block', opacity: 0.8 }} />
 
-            {triggers.length === 0 && (
-                <p style={{ fontSize: 11, color: 'var(--color-text-muted)', textAlign: 'center', padding: '2px 0' }}>
-                    Sin triggers — añade uno abajo
-                </p>
-            )}
+                                        {/* Edit Button */}
+                                        <button
+                                            onClick={() => onEditImage(idx)}
+                                            style={{
+                                                position: 'absolute', top: 8, left: 8,
+                                                background: 'var(--color-brand)', border: 'none',
+                                                borderRadius: 4, padding: '4px 8px',
+                                                display: 'flex', alignItems: 'center', gap: 6,
+                                                color: 'white', fontSize: 11, fontWeight: 600,
+                                                cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                                                zIndex: 2
+                                            }}
+                                        >
+                                            ✏️ Editar {imageSegments.length > 1 ? `Tramo ${idx + 1}` : ''}
+                                        </button>
 
-            {/* Add trigger buttons */}
-            <div style={{
-                position: 'sticky', bottom: -16, margin: '10px -20px -16px -20px', padding: '16px 20px',
-                background: 'var(--color-surface)', borderTop: '1px solid var(--color-border)',
-                zIndex: 10
-            }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                    <AddBtn onClick={() => addTrigger('click')} icon={MousePointer} label="+ Click" color={TRIGGER_COLORS.click.label} />
-                    <AddBtn onClick={() => addTrigger('double_click')} icon={MousePointer} label="+ Doble Clic" color={TRIGGER_COLORS.double_click.label} />
-                    <AddBtn onClick={() => addTrigger('keypress')} icon={Keyboard} label="+ Tecla" color={TRIGGER_COLORS.keypress.label} />
-                    <AddBtn onClick={() => addTrigger('input')} icon={TextCursorInput} label="+ Input" color={TRIGGER_COLORS.input.label} />
-                    <AddBtn onClick={() => addTrigger('dropdown')} icon={List} label="+ Lista" color={TRIGGER_COLORS.dropdown.label} />
-                    <AddBtn onClick={() => addTrigger('dependent_dropdown')} icon={ListTree} label="+ Lista Doble" color={TRIGGER_COLORS.dependent_dropdown.label} />
-                    <AddBtn onClick={() => addTrigger('scroll_area')} icon={GripVertical} label="+ Área Scroll" color={TRIGGER_COLORS.scroll_area.label} />
-                    <AddBtn onClick={() => addTrigger('radio')} icon={CircleDot} label="+ Radio" color={TRIGGER_COLORS.radio.label} />
-                    <AddBtn onClick={() => addTrigger('checkbox')} icon={CheckSquare} label="+ Checkbox" color={TRIGGER_COLORS.checkbox.label} />
+                                        {/* Delete Button */}
+                                        <button
+                                            onClick={() => removeImageSegment(idx)}
+                                            style={{
+                                                position: 'absolute', top: 8, right: 8,
+                                                background: 'rgba(239, 68, 68, 0.9)', border: 'none',
+                                                borderRadius: 4, padding: '4px',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                color: 'white', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                                                zIndex: 2
+                                            }}
+                                            title="Eliminar este tramo"
+                                        >
+                                            <Trash2 size={12} />
+                                        </button>
+
+                                        <div style={{
+                                            position: 'absolute', bottom: 6, right: 8,
+                                            background: 'rgba(0,0,0,0.7)', padding: '2px 6px', borderRadius: 4,
+                                            fontSize: 10, color: '#fff', fontWeight: 600
+                                        }}>
+                                            Tramo {idx + 1}
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {/* Add Image Below Button */}
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    style={{
+                                        width: '100%', height: 42, border: '1px dashed var(--color-border)',
+                                        borderRadius: 7, background: 'var(--color-surface)', cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                        transition: 'all 150ms ease-out', marginTop: 4,
+                                    }}
+                                    onMouseEnter={e => {
+                                        e.currentTarget.style.borderColor = 'var(--color-border-strong)'
+                                        e.currentTarget.style.background = 'var(--color-raised)'
+                                    }}
+                                    onMouseLeave={e => {
+                                        e.currentTarget.style.borderColor = 'var(--color-border)'
+                                        e.currentTarget.style.background = 'var(--color-surface)'
+                                    }}
+                                >
+                                    <Plus size={14} style={{ color: 'var(--color-text-secondary)' }} />
+                                    <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontWeight: 500 }}>Añadir imagen debajo</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        style={{
+                            width: '100%', height: 84, border: '1px dashed var(--color-border)',
+                            borderRadius: 7, background: 'transparent', cursor: 'pointer',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center',
+                            justifyContent: 'center', gap: 7, transition: 'all 150ms ease-out',
+                        }}
+                        onMouseEnter={e => {
+                            e.currentTarget.style.borderColor = 'var(--color-border-strong)'
+                            e.currentTarget.style.background = 'var(--color-brand-dim)'
+                        }}
+                        onMouseLeave={e => {
+                            e.currentTarget.style.borderColor = 'var(--color-border)'
+                            e.currentTarget.style.background = 'transparent'
+                        }}
+                    >
+                        <Upload size={16} style={{ color: 'var(--color-text-muted)' }} />
+                        <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Subir imagen o video</span>
+                    </button>
+                )}
+            </>)}
+
+            {activeTab === 'triggers' && (<>
+                {/* Triggers */}
+                <Divider label={triggers.length > 0 ? `Triggers · ${triggers.length}` : 'Triggers'} />
+
+                {triggers.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {triggers.map((trigger, idx) => {
+                            const isExpanded = expandedState[trigger.id] !== false // Default true
+                            const isDragged = draggedIdx === idx
+                            const isDragOver = dragOverIdx === idx
+
+                            const draggableProps = {
+                                draggable: true,
+                                onDragStart: (e) => {
+                                    setDraggedIdx(idx)
+                                    e.dataTransfer.effectAllowed = 'move'
+                                    // Ghost image trick for cleaner drag
+                                    const el = e.currentTarget
+                                    e.dataTransfer.setDragImage(el, 20, 20)
+                                },
+                                onDragOver: (e) => {
+                                    e.preventDefault() // Necessary to allow dropping
+                                    if (draggedIdx !== null && draggedIdx !== idx) {
+                                        setDragOverIdx(idx)
+                                    }
+                                },
+                                onDragLeave: () => {
+                                    setDragOverIdx(null)
+                                },
+                                onDrop: (e) => {
+                                    e.preventDefault()
+                                    if (draggedIdx !== null && draggedIdx !== idx) {
+                                        const newTriggers = [...triggers]
+                                        const [draggedItem] = newTriggers.splice(draggedIdx, 1)
+                                        newTriggers.splice(idx, 0, draggedItem)
+                                        setTriggers(newTriggers)
+                                    }
+                                    setDraggedIdx(null)
+                                    setDragOverIdx(null)
+                                },
+                                onDragEnd: () => {
+                                    setDraggedIdx(null)
+                                    setDragOverIdx(null)
+                                },
+                                style: {
+                                    opacity: isDragged ? 0.4 : 1,
+                                    outline: isDragOver ? '2px solid var(--color-brand)' : 'none',
+                                    outlineOffset: 2,
+                                    transform: isDragOver ? (draggedIdx < idx ? 'translateY(4px)' : 'translateY(-4px)') : 'none',
+                                    transition: 'transform 150ms ease, outline 150ms ease, opacity 150ms ease',
+                                }
+                            }
+
+                            return (
+                                <React.Fragment key={trigger.id}>
+                                    <TriggerCard
+                                        trigger={trigger}
+                                        index={idx}
+                                        allTriggers={triggers}
+                                        nodes={nodes}
+                                        onUpdate={patch => updateTrigger(idx, patch)}
+                                        onDelete={() => deleteTrigger(idx)}
+                                        isExpanded={isExpanded}
+                                        onToggleExpand={() => setExpandedState(prev => ({ ...prev, [trigger.id]: !isExpanded }))}
+                                        draggableProps={draggableProps}
+                                    />
+                                    {idx < triggers.length - 1 && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: isDragged ? 0.4 : 1 }}>
+                                            <div style={{ flex: 1, height: 1, background: 'var(--color-border-subtle)' }} />
+                                            <span style={{ fontSize: 9, color: 'var(--color-text-muted)', fontWeight: 600, letterSpacing: '0.08em' }}>LUEGO</span>
+                                            <div style={{ flex: 1, height: 1, background: 'var(--color-border-subtle)' }} />
+                                        </div>
+                                    )}
+                                </React.Fragment>
+                            )
+                        })}
+                    </div>
+                )}
+
+                {triggers.length === 0 && (
+                    <p style={{ fontSize: 11, color: 'var(--color-text-muted)', textAlign: 'center', padding: '2px 0' }}>
+                        Sin triggers — añade uno abajo
+                    </p>
+                )}
+
+                {/* Add trigger buttons */}
+                <div style={{
+                    position: 'sticky', bottom: -16, margin: '10px -20px -16px -20px', padding: '16px 20px',
+                    background: 'var(--color-surface)', borderTop: '1px solid var(--color-border)',
+                    zIndex: 10
+                }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                        <AddBtn onClick={() => addTrigger('click')} icon={MousePointer} label="+ Click" color={TRIGGER_COLORS.click.label} />
+                        <AddBtn onClick={() => addTrigger('double_click')} icon={MousePointer} label="+ Doble Clic" color={TRIGGER_COLORS.double_click.label} />
+                        <AddBtn onClick={() => addTrigger('keypress')} icon={Keyboard} label="+ Tecla" color={TRIGGER_COLORS.keypress.label} />
+                        <AddBtn onClick={() => addTrigger('input')} icon={TextCursorInput} label="+ Input" color={TRIGGER_COLORS.input.label} />
+                        <AddBtn onClick={() => addTrigger('dropdown')} icon={List} label="+ Lista" color={TRIGGER_COLORS.dropdown.label} />
+                        <AddBtn onClick={() => addTrigger('dependent_dropdown')} icon={ListTree} label="+ Lista Doble" color={TRIGGER_COLORS.dependent_dropdown.label} />
+                        <AddBtn onClick={() => addTrigger('scroll_area')} icon={GripVertical} label="+ Área Scroll" color={TRIGGER_COLORS.scroll_area.label} />
+                        <AddBtn onClick={() => addTrigger('radio')} icon={CircleDot} label="+ Radio" color={TRIGGER_COLORS.radio.label} />
+                        <AddBtn onClick={() => addTrigger('checkbox')} icon={CheckSquare} label="+ Checkbox" color={TRIGGER_COLORS.checkbox.label} />
+                    </div>
                 </div>
-            </div>
+            </>)}
         </div>
     )
 }

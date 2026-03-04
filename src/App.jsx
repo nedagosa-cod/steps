@@ -20,7 +20,7 @@ import ScrollImageBuilder from './components/ScrollImageBuilder'
 import AuthNode from './components/AuthNode'
 import ButtonEdge from './components/ButtonEdge'
 
-import { GitBranch, Plus, Play, Settings2, Trash2, Layers, Download, Maximize2, Save, Upload, Image as ImageIcon, UserCircle } from 'lucide-react'
+import { GitBranch, Plus, Play, Settings2, Trash2, Layers, Download, Maximize2, Save, Upload, Image as ImageIcon, UserCircle, Zap } from 'lucide-react'
 import { exportSimulator } from './utils/exporter'
 import { exportAsExe } from './utils/exporterExe'
 import { TRIGGER_COLORS } from './utils/triggers'
@@ -58,6 +58,7 @@ export default function App() {
   const [isFocusMode, setIsFocusMode] = useState(false)
   const [isEditingImage, setIsEditingImage] = useState(null) // null or index
   const [showImageBuilder, setShowImageBuilder] = useState(false)
+  const [configTab, setConfigTab] = useState('node') // 'node' | 'media' | 'triggers'
 
   const deleteEdge = useCallback((id) => {
     setEdges((eds) => eds.filter((e) => e.id !== id))
@@ -441,21 +442,61 @@ export default function App() {
       </main>
 
       {/* ── RIGHT CONFIG PANEL ────────────────────────────────── */}
-      <aside style={S.rightPanel}>
-        <div style={S.rightPanelHeader}>
-          <Settings2 size={13} color="var(--color-brand)" />
-          <span style={S.rightPanelTitle}>Configuración</span>
-          {selectedNode && (
-            <span style={S.nodeIdBadge}>{selectedNode.id}</span>
-          )}
+      <aside style={{ ...S.rightPanel, flexDirection: 'row' }}>
+        {/* Panel content */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={S.rightPanelHeader}>
+            <span style={S.rightPanelTitle}>
+              {configTab === 'node' ? 'Nodo' : configTab === 'media' ? 'Media' : 'Triggers'}
+            </span>
+            {selectedNode && (
+              <span style={S.nodeIdBadge}>{selectedNode.id}</span>
+            )}
+          </div>
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <NodeConfigPanel
+              node={selectedNode}
+              onUpdateNode={onUpdateNode}
+              nodes={nodes}
+              onEditImage={(idx) => setIsEditingImage(idx)}
+              activeTab={configTab}
+            />
+          </div>
         </div>
-        <div style={{ flex: 1, overflow: 'hidden' }}>
-          <NodeConfigPanel
-            node={selectedNode}
-            onUpdateNode={onUpdateNode}
-            nodes={nodes}
-            onEditImage={(idx) => setIsEditingImage(idx)}
-          />
+
+        {/* Vertical tab bar */}
+        <div style={{
+          display: 'flex', flexDirection: 'column',
+          width: 36, flexShrink: 0,
+          borderLeft: '1px solid var(--color-border-subtle)',
+          background: 'var(--color-raised)',
+          paddingTop: 6, gap: 2,
+        }}>
+          {[
+            { id: 'node', icon: Settings2, label: 'Nodo' },
+            { id: 'media', icon: ImageIcon, label: 'Media' },
+            { id: 'triggers', icon: Zap, label: 'Triggers' },
+          ].map(({ id, icon: Icon, label }) => {
+            const active = configTab === id
+            return (
+              <button
+                key={id}
+                onClick={() => setConfigTab(id)}
+                title={label}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: '100%', height: 34,
+                  border: 'none', cursor: 'pointer',
+                  background: active ? 'var(--color-surface)' : 'transparent',
+                  borderLeft: active ? '2px solid var(--color-brand)' : '2px solid transparent',
+                  color: active ? 'var(--color-brand)' : 'var(--color-text-muted)',
+                  transition: 'all 120ms ease-out',
+                }}
+              >
+                <Icon size={15} />
+              </button>
+            )
+          })}
         </div>
       </aside>
     </div>
