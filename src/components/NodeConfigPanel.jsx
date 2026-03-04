@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react'
-import { Upload, MousePointer, Keyboard, Info, Image, Video, Trash2, GripVertical, ChevronDown, ChevronUp, TextCursorInput, List, ListTree, Plus, ImageIcon, CircleDot, CheckSquare, CalendarDays } from 'lucide-react'
+import { Upload, MousePointer, Keyboard, Info, Image, Video, Trash2, GripVertical, ChevronDown, ChevronUp, TextCursorInput, List, ListTree, Plus, ImageIcon, CircleDot, CheckSquare, CalendarDays, Undo2, Settings2 } from 'lucide-react'
 import { normalizeTriggers, makeDefaultTrigger, TRIGGER_COLORS, TRIGGER_LABELS } from '../utils/triggers'
 
 /* ── Atoms ── */
@@ -919,6 +919,7 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage
     const [draggedIdx, setDraggedIdx] = useState(null)
     const [dragOverIdx, setDragOverIdx] = useState(null)
     const [expandedState, setExpandedState] = useState({})
+    const [editingTriggerId, setEditingTriggerId] = useState(null)
 
     if (!node) {
         return (
@@ -950,8 +951,11 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage
         setTriggers(triggers.map((t, i) => i === idx ? { ...t, ...patch } : t))
     const deleteTrigger = (idx) =>
         setTriggers(triggers.filter((_, i) => i !== idx))
-    const addTrigger = (type) =>
-        setTriggers([...triggers, makeDefaultTrigger(type)])
+    const addTrigger = (type) => {
+        const newTrigger = makeDefaultTrigger(type)
+        setTriggers([...triggers, newTrigger])
+        setEditingTriggerId(newTrigger.id)
+    }
 
     const handleMediaUpload = (e) => {
         const file = e.target.files?.[0]
@@ -1155,6 +1159,34 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage
 
                 {isResult && (
                     <>
+                        <Divider label="Diseño" />
+                        <div style={{ display: 'flex', gap: 12 }}>
+                            <div style={{ flex: 1 }}>
+                                <FieldLabel>Color Primario</FieldLabel>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <input
+                                        type="color"
+                                        value={data.certColorPrimary || '#1E3A8A'}
+                                        onChange={e => update({ certColorPrimary: e.target.value })}
+                                        style={{ width: 32, height: 32, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer', background: 'transparent' }}
+                                    />
+                                    <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontFamily: 'monospace' }}>{data.certColorPrimary || '#1E3A8A'}</span>
+                                </div>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <FieldLabel>Color Secundario</FieldLabel>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <input
+                                        type="color"
+                                        value={data.certColorAccent || '#EAB308'}
+                                        onChange={e => update({ certColorAccent: e.target.value })}
+                                        style={{ width: 32, height: 32, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer', background: 'transparent' }}
+                                    />
+                                    <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontFamily: 'monospace' }}>{data.certColorAccent || '#EAB308'}</span>
+                                </div>
+                            </div>
+                        </div>
+
                         <Divider label="Textos del Certificado" />
                         <div>
                             <FieldLabel>Título Principal</FieldLabel>
@@ -1363,110 +1395,192 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage
             </>)}
 
             {activeTab === 'triggers' && (<>
-                {/* Triggers */}
-                <Divider label={triggers.length > 0 ? `Triggers · ${triggers.length}` : 'Triggers'} />
-
-                {triggers.length > 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {triggers.map((trigger, idx) => {
-                            const isExpanded = expandedState[trigger.id] !== false // Default true
-                            const isDragged = draggedIdx === idx
-                            const isDragOver = dragOverIdx === idx
-
-                            const draggableProps = {
-                                draggable: true,
-                                onDragStart: (e) => {
-                                    setDraggedIdx(idx)
-                                    e.dataTransfer.effectAllowed = 'move'
-                                    // Ghost image trick for cleaner drag
-                                    const el = e.currentTarget
-                                    e.dataTransfer.setDragImage(el, 20, 20)
-                                },
-                                onDragOver: (e) => {
-                                    e.preventDefault() // Necessary to allow dropping
-                                    if (draggedIdx !== null && draggedIdx !== idx) {
-                                        setDragOverIdx(idx)
-                                    }
-                                },
-                                onDragLeave: () => {
-                                    setDragOverIdx(null)
-                                },
-                                onDrop: (e) => {
-                                    e.preventDefault()
-                                    if (draggedIdx !== null && draggedIdx !== idx) {
-                                        const newTriggers = [...triggers]
-                                        const [draggedItem] = newTriggers.splice(draggedIdx, 1)
-                                        newTriggers.splice(idx, 0, draggedItem)
-                                        setTriggers(newTriggers)
-                                    }
-                                    setDraggedIdx(null)
-                                    setDragOverIdx(null)
-                                },
-                                onDragEnd: () => {
-                                    setDraggedIdx(null)
-                                    setDragOverIdx(null)
-                                },
-                                style: {
-                                    opacity: isDragged ? 0.4 : 1,
-                                    outline: isDragOver ? '2px solid var(--color-brand)' : 'none',
-                                    outlineOffset: 2,
-                                    transform: isDragOver ? (draggedIdx < idx ? 'translateY(4px)' : 'translateY(-4px)') : 'none',
-                                    transition: 'transform 150ms ease, outline 150ms ease, opacity 150ms ease',
-                                }
-                            }
-
-                            return (
-                                <React.Fragment key={trigger.id}>
-                                    <TriggerCard
-                                        trigger={trigger}
-                                        index={idx}
-                                        allTriggers={triggers}
-                                        nodes={nodes}
-                                        onUpdate={patch => updateTrigger(idx, patch)}
-                                        onDelete={() => deleteTrigger(idx)}
-                                        isExpanded={isExpanded}
-                                        onToggleExpand={() => setExpandedState(prev => ({ ...prev, [trigger.id]: !isExpanded }))}
-                                        draggableProps={draggableProps}
-                                        onOpenScrollLibrary={onOpenScrollLibrary}
-                                    />
-                                    {idx < triggers.length - 1 && (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: isDragged ? 0.4 : 1 }}>
-                                            <div style={{ flex: 1, height: 1, background: 'var(--color-border-subtle)' }} />
-                                            <span style={{ fontSize: 9, color: 'var(--color-text-muted)', fontWeight: 600, letterSpacing: '0.08em' }}>LUEGO</span>
-                                            <div style={{ flex: 1, height: 1, background: 'var(--color-border-subtle)' }} />
-                                        </div>
-                                    )}
-                                </React.Fragment>
-                            )
-                        })}
-                    </div>
-                )}
-
-                {triggers.length === 0 && (
-                    <p style={{ fontSize: 11, color: 'var(--color-text-muted)', textAlign: 'center', padding: '2px 0' }}>
-                        Sin triggers — añade uno abajo
-                    </p>
-                )}
-
-                {/* Add trigger buttons */}
-                <div style={{
-                    position: 'sticky', bottom: -16, margin: '10px -20px -16px -20px', padding: '16px 20px',
-                    background: 'var(--color-surface)', borderTop: '1px solid var(--color-border)',
-                    zIndex: 10
-                }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                        <AddBtn onClick={() => addTrigger('click')} icon={MousePointer} label="+ Click" color={TRIGGER_COLORS.click.label} />
-                        <AddBtn onClick={() => addTrigger('double_click')} icon={MousePointer} label="+ Doble Clic" color={TRIGGER_COLORS.double_click.label} />
-                        <AddBtn onClick={() => addTrigger('keypress')} icon={Keyboard} label="+ Tecla" color={TRIGGER_COLORS.keypress.label} />
-                        <AddBtn onClick={() => addTrigger('input')} icon={TextCursorInput} label="+ Input" color={TRIGGER_COLORS.input.label} />
-                        <AddBtn onClick={() => addTrigger('dropdown')} icon={List} label="+ Lista" color={TRIGGER_COLORS.dropdown.label} />
-                        <AddBtn onClick={() => addTrigger('dependent_dropdown')} icon={ListTree} label="+ Lista Doble" color={TRIGGER_COLORS.dependent_dropdown.label} />
-                        <AddBtn onClick={() => addTrigger('scroll_area')} icon={GripVertical} label="+ Área Scroll" color={TRIGGER_COLORS.scroll_area.label} />
-                        <AddBtn onClick={() => addTrigger('radio')} icon={CircleDot} label="+ Radio" color={TRIGGER_COLORS.radio.label} />
-                        <AddBtn onClick={() => addTrigger('checkbox')} icon={CheckSquare} label="+ Checkbox" color={TRIGGER_COLORS.checkbox.label} />
-                        <AddBtn onClick={() => addTrigger('input_date')} icon={CalendarDays} label="+ Calendario" color={TRIGGER_COLORS.input_date.label} />
+                {/* Triggers Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-secondary)', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+                        {editingTriggerId ? 'Configuración de Trigger' : `Triggers · ${triggers.length}`}
                     </div>
                 </div>
+
+                {!editingTriggerId ? (
+                    // LIST VIEW
+                    <>
+                        {triggers.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+                                {triggers.map((trigger, idx) => {
+                                    const isDragged = draggedIdx === idx
+                                    const isDragOver = dragOverIdx === idx
+                                    let hint = trigger.hint
+                                    if (!hint) {
+                                        switch (trigger.type) {
+                                            case 'click': hint = "Hacer clic en la zona"; break;
+                                            case 'double_click': hint = "Doble clic en la zona"; break;
+                                            case 'input': hint = "Llenar campo de texto"; break;
+                                            case 'dropdown': hint = "Elegir opción"; break;
+                                            case 'dependent_dropdown': hint = "Elegir subcategoría"; break;
+                                            case 'keypress': hint = `Presionar ${trigger.keyCode || 'tecla'}`; break;
+                                            case 'scroll_area': hint = "Desplazar área"; break;
+                                            case 'radio': hint = "Seleccionar radio"; break;
+                                            case 'checkbox': hint = "Marcar checkbox"; break;
+                                            case 'input_date': hint = "Ingresar fecha"; break;
+                                            default: hint = "Acción requerida";
+                                        }
+                                    }
+
+                                    const draggableProps = {
+                                        draggable: true,
+                                        onDragStart: (e) => {
+                                            setDraggedIdx(idx)
+                                            e.dataTransfer.effectAllowed = 'move'
+                                            e.dataTransfer.setDragImage(e.currentTarget, 20, 20)
+                                        },
+                                        onDragOver: (e) => {
+                                            e.preventDefault()
+                                            if (draggedIdx !== null && draggedIdx !== idx) setDragOverIdx(idx)
+                                        },
+                                        onDragLeave: () => setDragOverIdx(null),
+                                        onDrop: (e) => {
+                                            e.preventDefault()
+                                            if (draggedIdx !== null && draggedIdx !== idx) {
+                                                const newTriggers = [...triggers]
+                                                const [draggedItem] = newTriggers.splice(draggedIdx, 1)
+                                                newTriggers.splice(idx, 0, draggedItem)
+                                                setTriggers(newTriggers)
+                                            }
+                                            setDraggedIdx(null)
+                                            setDragOverIdx(null)
+                                        },
+                                        onDragEnd: () => {
+                                            setDraggedIdx(null)
+                                            setDragOverIdx(null)
+                                        },
+                                        style: {
+                                            opacity: isDragged ? 0.4 : 1,
+                                            outline: isDragOver ? '2px solid var(--color-brand)' : 'none',
+                                            outlineOffset: 1,
+                                            transform: isDragOver ? (draggedIdx < idx ? 'translateY(2px)' : 'translateY(-2px)') : 'none',
+                                            transition: 'all 150ms ease',
+                                        }
+                                    }
+
+                                    return (
+                                        <div
+                                            key={trigger.id}
+                                            {...draggableProps}
+                                            style={{
+                                                ...draggableProps.style,
+                                                display: 'flex', alignItems: 'center', padding: '10px',
+                                                background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+                                                borderRadius: 6, cursor: 'grab', gap: 10
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    <span style={{
+                                                        fontSize: 9, fontWeight: 700, padding: '2px 6px', letterSpacing: '0.04em', textTransform: 'uppercase',
+                                                        borderRadius: 4, background: TRIGGER_COLORS[trigger.type]?.bgActive || 'var(--color-raised)',
+                                                        color: TRIGGER_COLORS[trigger.type]?.label || 'var(--color-text-primary)'
+                                                    }}>
+                                                        {TRIGGER_LABELS[trigger.type] || trigger.type}
+                                                    </span>
+                                                    {trigger.isOptional && <span style={{ fontSize: 9, color: 'var(--color-text-tertiary)' }}>(OpcIONAL)</span>}
+                                                </div>
+                                                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {hint}
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => setEditingTriggerId(trigger.id)}
+                                                style={{ background: 'var(--color-control)', border: '1px solid var(--color-border)', borderRadius: 4, cursor: 'pointer', color: 'var(--color-text-primary)', padding: 6, display: 'flex', alignItems: 'center' }}
+                                                title="Editar"
+                                                onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--color-brand)'}
+                                                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--color-border)'}
+                                            >
+                                                <Settings2 size={14} />
+                                            </button>
+                                            <button
+                                                onClick={() => deleteTrigger(idx)}
+                                                style={{ background: 'var(--color-control)', border: '1px solid var(--color-border)', borderRadius: 4, cursor: 'pointer', color: 'var(--color-danger)', padding: 6, display: 'flex', alignItems: 'center' }}
+                                                title="Eliminar"
+                                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,50,50,0.1)'}
+                                                onMouseLeave={e => e.currentTarget.style.background = 'var(--color-control)'}
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        ) : (
+                            <p style={{ fontSize: 12, color: 'var(--color-text-muted)', textAlign: 'center', padding: '10px 0 20px 0' }}>
+                                Sin triggers — añade uno abajo
+                            </p>
+                        )}
+
+                        {/* Add trigger buttons */}
+                        <div style={{
+                            position: 'sticky', bottom: -16, margin: '10px -20px -16px -20px', padding: '16px 20px',
+                            background: 'var(--color-surface)', borderTop: '1px solid var(--color-border)',
+                            zIndex: 10
+                        }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                                <AddBtn onClick={() => addTrigger('click')} icon={MousePointer} label="+ Click" color={TRIGGER_COLORS.click.label} />
+                                <AddBtn onClick={() => addTrigger('double_click')} icon={MousePointer} label="+ Doble Clic" color={TRIGGER_COLORS.double_click.label} />
+                                <AddBtn onClick={() => addTrigger('keypress')} icon={Keyboard} label="+ Tecla" color={TRIGGER_COLORS.keypress.label} />
+                                <AddBtn onClick={() => addTrigger('input')} icon={TextCursorInput} label="+ Input" color={TRIGGER_COLORS.input.label} />
+                                <AddBtn onClick={() => addTrigger('dropdown')} icon={List} label="+ Lista" color={TRIGGER_COLORS.dropdown.label} />
+                                <AddBtn onClick={() => addTrigger('dependent_dropdown')} icon={ListTree} label="+ Lista Doble" color={TRIGGER_COLORS.dependent_dropdown.label} />
+                                <AddBtn onClick={() => addTrigger('scroll_area')} icon={GripVertical} label="+ Área Scroll" color={TRIGGER_COLORS.scroll_area.label} />
+                                <AddBtn onClick={() => addTrigger('radio')} icon={CircleDot} label="+ Radio" color={TRIGGER_COLORS.radio.label} />
+                                <AddBtn onClick={() => addTrigger('checkbox')} icon={CheckSquare} label="+ Checkbox" color={TRIGGER_COLORS.checkbox.label} />
+                                <AddBtn onClick={() => addTrigger('input_date')} icon={CalendarDays} label="+ Calendario" color={TRIGGER_COLORS.input_date.label} />
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    // EDIT VIEW
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 24 }}>
+                        <button
+                            onClick={() => setEditingTriggerId(null)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 6,
+                                background: 'transparent', border: 'none', cursor: 'pointer',
+                                color: 'var(--color-text-secondary)', fontSize: 11, fontWeight: 600,
+                                padding: '4px 0', alignSelf: 'flex-start', transition: 'color 150ms ease'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.color = 'var(--color-text-primary)'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'var(--color-text-secondary)'}
+                        >
+                            <Undo2 size={14} /> Volver a la lista
+                        </button>
+
+                        {(() => {
+                            const idx = triggers.findIndex(t => t.id === editingTriggerId)
+                            if (idx === -1) {
+                                // Just in case it gets deleted externally
+                                setTimeout(() => setEditingTriggerId(null), 0)
+                                return null
+                            }
+                            return (
+                                <TriggerCard
+                                    trigger={triggers[idx]}
+                                    index={idx}
+                                    allTriggers={triggers}
+                                    nodes={nodes}
+                                    onUpdate={patch => updateTrigger(idx, patch)}
+                                    onDelete={() => {
+                                        deleteTrigger(idx)
+                                        setEditingTriggerId(null)
+                                    }}
+                                    isExpanded={true}
+                                    onToggleExpand={() => { }}
+                                    draggableProps={{}}
+                                    onOpenScrollLibrary={onOpenScrollLibrary}
+                                />
+                            )
+                        })()}
+                    </div>
+                )}
             </>)}
         </div>
     )

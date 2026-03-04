@@ -71,6 +71,30 @@ export default function App() {
   })
   const [showScrollLibrary, setShowScrollLibrary] = useState(false)
   const [scrollLibraryCallback, setScrollLibraryCallback] = useState(null) // function(dataUrl)
+  const [rightPanelWidth, setRightPanelWidth] = useState(280)
+
+  const handleMouseDownResize = useCallback((e) => {
+    e.preventDefault()
+    document.body.style.cursor = 'col-resize'
+
+    const startX = e.clientX
+    const startWidth = rightPanelWidth
+
+    const handleMouseMove = (mouseMoveEvent) => {
+      const deltaX = startX - mouseMoveEvent.clientX
+      const newWidth = Math.max(260, Math.min(800, startWidth + deltaX))
+      setRightPanelWidth(newWidth)
+    }
+
+    const handleMouseUp = () => {
+      document.body.style.cursor = 'default'
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }, [rightPanelWidth])
 
   const deleteEdge = useCallback((id) => {
     setEdges((eds) => eds.filter((e) => e.id !== id))
@@ -528,8 +552,25 @@ export default function App() {
         </div>
       </main>
 
+      {/* ── SPLITTER ────────────────────────────────────────────── */}
+      <div
+        onMouseDown={handleMouseDownResize}
+        style={{
+          width: 6,
+          cursor: 'col-resize',
+          background: 'transparent',
+          zIndex: 20,
+          marginLeft: -3,
+          marginRight: -3, // absorb some space so it's easy to grab
+          borderLeft: '1px solid var(--color-border-subtle)', // acts as border-left for the aside
+          transition: 'background 150ms ease',
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--color-brand)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+      />
+
       {/* ── RIGHT CONFIG PANEL ────────────────────────────────── */}
-      <aside style={{ ...S.rightPanel, flexDirection: 'row' }}>
+      <aside style={{ ...S.rightPanel, width: rightPanelWidth, borderLeft: 'none', flexDirection: 'row' }}>
         {/* Panel content */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={S.rightPanelHeader}>

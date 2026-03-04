@@ -23,6 +23,41 @@
     const { nodes, edges, globalConfig = {} } = window.SIM_DATA;
     const getNode = (id) => nodes.find(n => n.id === id);
 
+    // ── Apply Transition Config CSS ─────────────────────────
+    (function applyTransitionConfig() {
+        const effect = globalConfig.transitionEffect || 'fade';
+        const style = document.createElement('style');
+
+        let transCss = `
+            #image-wrapper { transition: opacity 250ms ease-out, transform 250ms ease-out, filter 250ms ease-out !important; }
+            #image-wrapper.transitioning { opacity: 0 !important; }
+            .auth-backdrop { transition: opacity 250ms ease-out, transform 250ms ease-out, filter 250ms ease-out !important; }
+            .auth-backdrop.transitioning { opacity: 0 !important; }
+        `;
+
+        if (effect === 'none') {
+            transCss = `
+                #image-wrapper { transition: none !important; }
+                #image-wrapper.transitioning { opacity: 0 !important; }
+                .auth-backdrop { transition: none !important; }
+                .auth-backdrop.transitioning { opacity: 0 !important; }
+            `;
+        } else if (effect === 'zoom') {
+            transCss += `#image-wrapper.transitioning, .auth-backdrop.transitioning { transform: scale(0.95) !important; filter: blur(4px) !important; }`;
+        } else if (effect === 'slide-left') {
+            transCss += `#image-wrapper.transitioning, .auth-backdrop.transitioning { transform: translateX(30px) !important; filter: blur(2px) !important; }`;
+        } else if (effect === 'slide-right') {
+            transCss += `#image-wrapper.transitioning, .auth-backdrop.transitioning { transform: translateX(-30px) !important; filter: blur(2px) !important; }`;
+        } else if (effect === 'slide-up') {
+            transCss += `#image-wrapper.transitioning, .auth-backdrop.transitioning { transform: translateY(30px) !important; filter: blur(2px) !important; }`;
+        } else {
+            transCss += `#image-wrapper.transitioning, .auth-backdrop.transitioning { transform: none !important; filter: none !important; }`;
+        }
+
+        style.textContent = transCss;
+        document.head.appendChild(style);
+    })();
+
     // ── Compute node traversal order ─────────────────────────
     const startNode = nodes.find(n => n.data?.isStartNode) || nodes.find(n => !edges.some(e => e.target === n.id)) || nodes[0];
     const order = [];
@@ -135,13 +170,16 @@
         const preservedAuthName = inputValues["auth_name"] || "";
         inputValues = { "auth_name": preservedAuthName };
 
+        const effect = globalConfig.transitionEffect || 'fade';
+        const delay = effect === 'none' ? 0 : 280;
+
         setTimeout(() => {
             currentNodeId = targetId;
             render();
             elImageWrapper.classList.remove("transitioning");
             elProgressRow.classList.remove("transitioning");
             isTransitioning = false;
-        }, 280);
+        }, delay);
     }
 
     // ── Trigger completion ───────────────────────────────────
@@ -165,10 +203,13 @@
         // Silent mode: just mark as done, no navigation (used for radio group siblings)
         if (silent) return;
 
+        const effect = globalConfig.transitionEffect || 'fade';
+        const delay = effect === 'none' ? 10 : 350;
+
         // Check for explicit navigation branching
         const t = triggers.find(tr => tr.id === tId);
         if (t && t.navigateTarget) {
-            setTimeout(() => navigate(t.navigateTarget), 350);
+            setTimeout(() => navigate(t.navigateTarget), delay);
             return;
         }
 
@@ -176,8 +217,11 @@
         const allDone = triggers.every(tr => tr.isOptional || completedTriggers.has(tr.id));
         if (allDone) {
             const nextId = getNextNodeId();
-            if (nextId) setTimeout(() => navigate(nextId), 350);
-            else showSuccess();
+            if (nextId) {
+                setTimeout(() => navigate(nextId), delay);
+            } else {
+                showSuccess();
+            }
         }
     }
 
@@ -201,6 +245,8 @@
             elPracticeContent.innerHTML = "";
             guideTriggers.forEach((t, index) => {
                 const done = completedTriggers.has(t.id);
+                const depsArray = Array.isArray(t.dependsOn) ? t.dependsOn : (t.dependsOn ? [t.dependsOn] : []);
+                const isBlocked = depsArray.length > 0 && depsArray.some(depId => !completedTriggers.has(depId));
                 let hint = t.hint;
                 if (!hint) {
                     switch (t.type) {
@@ -218,14 +264,14 @@
                 }
 
                 const row = document.createElement("div");
-                row.style.cssText = "display:flex;align-items:flex-start;gap:8px;opacity:" + (done ? "0.4" : "1") + ";transition:all 300ms ease";
+                row.style.cssText = "display:flex;align-items:flex-start;gap:8px;opacity:" + (done ? "0.4" : (isBlocked ? "0.6" : "1")) + ";transition:all 300ms ease";
 
                 const circle = document.createElement("div");
                 circle.style.cssText = "margin-top:2px;width:14px;height:14px;border-radius:50%;border:1px solid " + (done ? "#5ac98a" : "var(--color-border-strong)") + ";background:" + (done ? "rgba(90,201,138,0.2)" : "transparent") + ";display:flex;align-items:center;justify-content:center;flex-shrink:0";
                 if (done) { const ck = document.createElement("span"); ck.textContent = "✓"; ck.style.cssText = "color:#5ac98a;font-size:10px"; circle.appendChild(ck); }
 
                 const text = document.createElement("div");
-                text.style.cssText = "font-size:12px;color:" + (done ? "var(--color-text-muted)" : "var(--color-text-primary)") + ";text-decoration:" + (done ? "line-through" : "none") + ";line-height:1.4";
+                text.style.cssText = "font-size:12px;color:" + (done ? "var(--color-text-muted)" : "var(--color-text-primary)") + ";text-decoration:" + (done ? "line-through" : "none") + ";line-height:1.4;flex:1";
                 const stepLabel = document.createElement("span");
                 stepLabel.style.cssText = "font-weight:600;margin-right:4px";
                 stepLabel.textContent = "Paso " + (index + 1) + ":";
@@ -234,6 +280,33 @@
 
                 row.appendChild(circle);
                 row.appendChild(text);
+
+                if (!done && !isBlocked) {
+                    const btn = document.createElement("button");
+                    btn.title = "Ver dónde hacer clic";
+                    btn.style.cssText = "background:transparent;border:none;cursor:pointer;color:var(--color-text-muted);display:flex;align-items:center;justify-content:center;padding:4px;border-radius:4px;flex-shrink:0";
+                    btn.onmouseenter = (e) => { e.currentTarget.style.color = "var(--color-brand)"; e.currentTarget.style.background = "rgba(255,255,255,0.05)"; };
+                    btn.onmouseleave = (e) => { e.currentTarget.style.color = "var(--color-text-muted)"; e.currentTarget.style.background = "transparent"; };
+                    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>';
+                    btn.onclick = () => {
+                        const el = document.getElementById("trigger-" + t.id);
+                        if (el) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            const oldBoxShadow = el.style.boxShadow;
+                            let cycle = 0;
+                            const interval = setInterval(() => {
+                                el.style.boxShadow = cycle % 2 === 0 ? "0 0 0 4px var(--color-brand), 0 0 20px var(--color-brand)" : oldBoxShadow;
+                                cycle++;
+                                if (cycle > 5) {
+                                    clearInterval(interval);
+                                    el.style.boxShadow = oldBoxShadow;
+                                }
+                            }, 300);
+                        }
+                    };
+                    row.appendChild(btn);
+                }
+
                 elPracticeContent.appendChild(row);
             });
         } else {
@@ -251,6 +324,7 @@
 
         const el = document.createElement("div");
         el.className = "trigger";
+        el.id = "trigger-" + t.id;
         el.style.left = hs.x + "%"; el.style.top = hs.y + "%";
         el.style.width = hs.w + "%"; el.style.height = hs.h + "%";
         el.style.pointerEvents = isBlocked ? "none" : "auto";
@@ -945,26 +1019,26 @@
             <div style="background: #ffffff; border-radius: 12px; padding: 30px 60px; width: 94%; max-width: 900px; min-height: min(90vh, 600px); text-align: center; margin: auto; box-shadow: 0 25px 80px rgba(0,0,0,0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; position: relative; overflow: hidden; color: #1a1a1a;">
                 <!-- Corners -->
                 <svg style="position: absolute; top: 0; left: 0; width: 250px; height: 250px; pointer-events: none;" viewBox="0 0 100 100" preserveAspectRatio="none">
-                    <path d="M0 0 L100 0 C50 20 20 50 0 100 Z" fill="#EAB308" opacity="0.9" />
-                    <path d="M0 0 L80 0 C40 15 15 40 0 80 Z" fill="#1E3A8A" />
+                    <path d="M0 0 L100 0 C50 20 20 50 0 100 Z" fill="${data.certColorAccent ?? '#EAB308'}" opacity="0.9" />
+                    <path d="M0 0 L80 0 C40 15 15 40 0 80 Z" fill="${data.certColorPrimary ?? '#1E3A8A'}" />
                 </svg>
                 <svg style="position: absolute; bottom: 0; right: 0; width: 250px; height: 250px; pointer-events: none;" viewBox="0 0 100 100" preserveAspectRatio="none">
-                    <path d="M100 100 L0 100 C50 80 80 50 100 0 Z" fill="#EAB308" opacity="0.9" />
-                    <path d="M100 100 L20 100 C60 85 85 60 100 20 Z" fill="#1E3A8A" />
+                    <path d="M100 100 L0 100 C50 80 80 50 100 0 Z" fill="${data.certColorAccent ?? '#EAB308'}" opacity="0.9" />
+                    <path d="M100 100 L20 100 C60 85 85 60 100 20 Z" fill="${data.certColorPrimary ?? '#1E3A8A'}" />
                 </svg>
                 <!-- Ribbon -->
                 <svg style="position: absolute; top: 0; right: 40px; width: 50px; height: 80px; pointer-events: none;" viewBox="0 0 50 80" preserveAspectRatio="none">
-                    <path d="M0 0 L50 0 L50 80 L25 60 L0 80 Z" fill="#EAB308" />
+                    <path d="M0 0 L50 0 L50 80 L25 60 L0 80 Z" fill="${data.certColorAccent ?? '#EAB308'}" />
                 </svg>
 
                 <!-- Seal -->
-                <div style="position: absolute; right: 60px; top: 45%; transform: translateY(-50%); width: 110px; height: 110px; border-radius: 50%; background: #1E3A8A; display: none; border: 3px solid #EAB308; color: #EAB308; box-shadow: 0 4px 15px rgba(0,0,0,0.1);" class="cert-seal">
+                <div style="position: absolute; right: 60px; top: 45%; transform: translateY(-50%); width: 110px; height: 110px; border-radius: 50%; background: ${data.certColorPrimary ?? '#1E3A8A'}; display: none; border: 3px solid ${data.certColorAccent ?? '#EAB308'}; color: ${data.certColorAccent ?? '#EAB308'}; box-shadow: 0 4px 15px rgba(0,0,0,0.1);" class="cert-seal">
                     <svg viewBox="0 0 100 100" style="width: 100%; height: 100%; padding: 12px; box-sizing: border-box;">
                         <path id="curve-seal" d="M 20 50 A 30 30 0 1 1 80 50 A 30 30 0 1 1 20 50" fill="transparent" />
-                        <text font-size="10" font-weight="bold" fill="#EAB308" letter-spacing="2">
+                        <text font-size="10" font-weight="bold" fill="${data.certColorAccent ?? '#EAB308'}" letter-spacing="2">
                             <textPath href="#curve-seal" startOffset="50%" text-anchor="middle">SELLO DE EXCELENCIA</textPath>
                         </text>
-                        <polygon points="50,30 55,40 65,42 58,50 60,60 50,55 40,60 42,50 35,42 45,40" fill="#EAB308" />
+                        <polygon points="50,30 55,40 65,42 58,50 60,60 50,55 40,60 42,50 35,42 45,40" fill="${data.certColorAccent ?? '#EAB308'}" />
                     </svg>
                 </div>
 
@@ -972,7 +1046,7 @@
                     <h1 style="margin: 0; font-size: clamp(32px, 5vw, 42px); font-weight: 900; color: #000000; letter-spacing: 0.05em; text-transform: uppercase;">
                         ${data.certTitle ?? 'CERTIFICADO'}
                     </h1>
-                    <h2 style="margin: 0; font-size: clamp(16px, 2.5vw, 22px); font-weight: 700; color: #1E3A8A; letter-spacing: 0.1em; text-transform: uppercase;">
+                    <h2 style="margin: 0; font-size: clamp(16px, 2.5vw, 22px); font-weight: 700; color: ${data.certColorPrimary ?? '#1E3A8A'}; letter-spacing: 0.1em; text-transform: uppercase;">
                         ${data.certSubtitle ?? 'DE RECONOCIMIENTO'}
                     </h2>
                 </div>
@@ -1010,7 +1084,7 @@
                     </div>
                 </div>
 
-                <button id="cert-finish-btn" style="margin-top: 20px; padding: 12px 32px; border-radius: 8px; background: #1E3A8A; color: white; font-weight: 600; font-size: 15px; border: none; cursor: pointer; box-shadow: 0 4px 14px rgba(30,58,138,0.4); transition: transform 150ms, box-shadow 150ms; z-index: 1;">
+                <button id="cert-finish-btn" style="margin-top: 20px; padding: 12px 32px; border-radius: 8px; background: ${data.certColorPrimary ?? '#1E3A8A'}; color: white; font-weight: 600; font-size: 15px; border: none; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.4); transition: transform 150ms, box-shadow 150ms; z-index: 1;">
                     Finalizar y Volver
                 </button>
             </div>
@@ -1020,8 +1094,8 @@
         wrap.innerHTML = htmlContent;
 
         const btn = wrap.querySelector("#cert-finish-btn");
-        btn.onmouseenter = () => { btn.style.transform = "translateY(-2px)"; btn.style.boxShadow = "0 6px 20px rgba(30,58,138,0.6)"; };
-        btn.onmouseleave = () => { btn.style.transform = "translateY(0)"; btn.style.boxShadow = "0 4px 14px rgba(30,58,138,0.4)"; };
+        btn.onmouseenter = () => { btn.style.transform = "translateY(-2px)"; btn.style.boxShadow = "0 6px 20px rgba(0,0,0,0.6)"; };
+        btn.onmouseleave = () => { btn.style.transform = "translateY(0)"; btn.style.boxShadow = "0 4px 14px rgba(0,0,0,0.4)"; };
         btn.onclick = () => {
             showSuccess("El simulador ha terminado exitosamente.");
         };

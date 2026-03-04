@@ -1,5 +1,5 @@
 import React from 'react'
-import { Settings, Clock, Image as ImageIcon, PaintBucket, Maximize } from 'lucide-react'
+import { Settings, Clock, Image as ImageIcon, PaintBucket, Maximize, RefreshCw } from 'lucide-react'
 
 const FieldLabel = ({ children }) => (
     <label style={{
@@ -219,6 +219,47 @@ export default function GlobalConfigPanel({ config, onUpdate, nodes, edges }) {
                             </p>
                         </div>
                     )}
+                </div>
+            </div>
+
+            <Divider />
+
+            {/* Efectos de Transición */}
+            <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                    <RefreshCw size={16} color="var(--color-brand)" />
+                    <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)', margin: 0 }}>
+                        Transición entre Pantallas
+                    </h3>
+                </div>
+
+                <p style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 16, lineHeight: 1.4 }}>
+                    Elige la animación que se reproducirá visualmente al saltar de una pantalla interactiva a otra.
+                </p>
+
+                <div>
+                    <select
+                        value={config.transitionEffect || 'fade'}
+                        onChange={e => onUpdate({ transitionEffect: e.target.value })}
+                        style={{
+                            width: '100%',
+                            background: 'var(--color-control)',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: 6, padding: '8px 12px',
+                            fontSize: 12, color: 'var(--color-text-primary)', outline: 'none',
+                            cursor: 'pointer', appearance: 'none',
+                            transition: 'border-color 150ms ease-out',
+                        }}
+                        onFocus={e => e.target.style.borderColor = 'var(--color-brand)'}
+                        onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
+                    >
+                        <option value="none" style={{ background: '#111', color: '#eee' }}>Sin Transición (Corte directo)</option>
+                        <option value="fade" style={{ background: '#111', color: '#eee' }}>Desvanecer (Fade)</option>
+                        <option value="zoom" style={{ background: '#111', color: '#eee' }}>Acercar Suavemente (Zoom & Fade)</option>
+                        <option value="slide-left" style={{ background: '#111', color: '#eee' }}>Deslizar a la Izquierda</option>
+                        <option value="slide-right" style={{ background: '#111', color: '#eee' }}>Deslizar a la Derecha</option>
+                        <option value="slide-up" style={{ background: '#111', color: '#eee' }}>Deslizar hacia Arriba</option>
+                    </select>
                 </div>
             </div>
 

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react'
-import { X, CheckCircle, AlertCircle, GripHorizontal, ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
+import { X, CheckCircle, AlertCircle, GripHorizontal, ChevronDown, Maximize2, Minimize2, Eye } from 'lucide-react'
 import { normalizeTriggers, TRIGGER_COLORS } from '../utils/triggers'
 
 function DraggableHUD({ children }) {
@@ -91,6 +91,7 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
             return (
                 <button
                     key={trigger.id}
+                    id={`trigger-${trigger.id}`}
                     onClick={() => { if (isClick && !isDone && !isBlocked) handleClickTrigger(trigger) }}
                     onDoubleClick={() => { if (isDbl && !isDone && !isBlocked) handleClickTrigger(trigger) }}
                     disabled={isBlocked}
@@ -128,6 +129,7 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
             return (
                 <div
                     key={trigger.id}
+                    id={`trigger-${trigger.id}`}
                     style={{
                         position: 'absolute',
                         left: `${hs.x}%`, top: `${hs.y}%`,
@@ -185,6 +187,7 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
             return (
                 <div
                     key={trigger.id}
+                    id={`trigger-${trigger.id}`}
                     style={{
                         position: 'absolute',
                         left: `${hs.x}%`, top: `${hs.y}%`,
@@ -248,6 +251,7 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
             return (
                 <div
                     key={trigger.id}
+                    id={`trigger-${trigger.id}`}
                     style={{
                         position: 'absolute',
                         left: `${hs.x}%`, top: `${hs.y}%`,
@@ -363,6 +367,7 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
             return (
                 <div
                     key={trigger.id}
+                    id={`trigger-${trigger.id}`}
                     style={{
                         position: 'absolute',
                         left: `${hs.x}%`, top: `${hs.y}%`,
@@ -436,6 +441,7 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
             return (
                 <div
                     key={trigger.id}
+                    id={`trigger-${trigger.id}`}
                     style={{
                         position: 'absolute',
                         left: `${hs.x}%`, top: `${hs.y}%`,
@@ -474,6 +480,7 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
             return (
                 <div
                     key={trigger.id}
+                    id={`trigger-${trigger.id}`}
                     style={{
                         position: 'absolute',
                         left: `${hs.x}%`, top: `${hs.y}%`,
@@ -506,6 +513,7 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
             return (
                 <div
                     key={trigger.id}
+                    id={`trigger-${trigger.id}`}
                     onClick={() => {
                         if (isDone || isBlocked) return
                         setInputValues(prev => ({ ...prev, [`_radioGroup_${groupName}`]: trigger.id }))
@@ -554,6 +562,7 @@ function renderTriggerOverlays(triggers, completedTriggers, handleClickTrigger, 
             return (
                 <div
                     key={trigger.id}
+                    id={`trigger-${trigger.id}`}
                     onClick={() => {
                         if (isDone || isBlocked) return
                         const newChecked = !isChecked
@@ -644,6 +653,21 @@ export default function PreviewMode({ nodes, edges, globalConfig = {}, onExit })
         return order
     })()
 
+    const getTransitionStyles = () => {
+        const effect = globalConfig.transitionEffect || 'fade'
+        if (effect === 'none') return { transition: 'none', opacity: transitioning ? 0 : 1 }
+
+        const baseTrans = 'opacity 250ms ease-out, transform 250ms ease-out, filter 250ms ease-out'
+        switch (effect) {
+            case 'zoom': return { transition: baseTrans, opacity: transitioning ? 0 : 1, transform: transitioning ? 'scale(0.95)' : 'scale(1)', filter: transitioning ? 'blur(4px)' : 'blur(0)' }
+            case 'slide-left': return { transition: baseTrans, opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateX(30px)' : 'translateX(0)', filter: transitioning ? 'blur(2px)' : 'blur(0)' }
+            case 'slide-right': return { transition: baseTrans, opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateX(-30px)' : 'translateX(0)', filter: transitioning ? 'blur(2px)' : 'blur(0)' }
+            case 'slide-up': return { transition: baseTrans, opacity: transitioning ? 0 : 1, transform: transitioning ? 'translateY(30px)' : 'translateY(0)', filter: transitioning ? 'blur(2px)' : 'blur(0)' }
+            case 'fade':
+            default: return { transition: baseTrans, opacity: transitioning ? 0 : 1, transform: 'none', filter: 'none' }
+        }
+    }
+
     const stepIndex = nodeOrder.indexOf(currentNodeId)
     const totalSteps = nodeOrder.length
 
@@ -657,10 +681,29 @@ export default function PreviewMode({ nodes, edges, globalConfig = {}, onExit })
         setSuccess(false)
         setInputValues(prev => ({ auth_name: prev['auth_name'] || '' }))
         setCompletedTriggers(new Set())
+
+        const delay = globalConfig?.transitionEffect === 'none' ? 0 : 280
         setTimeout(() => {
             setCurrentNodeId(targetId)
             setTransitioning(false)
-        }, 280)
+        }, delay)
+    }, [globalConfig?.transitionEffect])
+
+    const handleHighlightTrigger = useCallback((id) => {
+        const el = document.getElementById(`trigger-${id}`);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const oldBoxShadow = el.style.boxShadow;
+            let cycle = 0;
+            const interval = setInterval(() => {
+                el.style.boxShadow = cycle % 2 === 0 ? '0 0 0 4px var(--color-brand), 0 0 20px var(--color-brand)' : oldBoxShadow;
+                cycle++;
+                if (cycle > 5) {
+                    clearInterval(interval);
+                    el.style.boxShadow = oldBoxShadow;
+                }
+            }, 300);
+        }
     }, [])
 
     // Called after each trigger completes — check if ALL are done, OR if this specific trigger has a branch
@@ -672,11 +715,13 @@ export default function PreviewMode({ nodes, edges, globalConfig = {}, onExit })
             // Silent mode: just mark as done, no navigation (used for radio group siblings)
             if (silent) return next
 
+            const delay = globalConfig?.transitionEffect === 'none' ? 10 : 350
+
             // Check for explicit navigation branching
             const completedTrigger = allTriggers.find(t => t.id === triggerId)
             if (completedTrigger && completedTrigger.navigateTarget) {
                 // Ignore allDone check, branch immediately after a short delay
-                setTimeout(() => navigate(completedTrigger.navigateTarget), 350)
+                setTimeout(() => navigate(completedTrigger.navigateTarget), delay)
                 return next // the HUD will stick slightly then switch
             }
 
@@ -686,14 +731,14 @@ export default function PreviewMode({ nodes, edges, globalConfig = {}, onExit })
                 const nextId = getNextNodeId()
                 if (nextId) {
                     // Navigate with a slight delay so the ✓ is visible
-                    setTimeout(() => navigate(nextId), 350)
+                    setTimeout(() => navigate(nextId), delay)
                 } else {
                     setSuccess(true)
                 }
             }
             return next
         })
-    }, [getNextNodeId, navigate])
+    }, [getNextNodeId, navigate, globalConfig?.transitionEffect])
 
     // Global keydown listener for keypress triggers
     useEffect(() => {
@@ -1005,6 +1050,8 @@ export default function PreviewMode({ nodes, edges, globalConfig = {}, onExit })
                                 }
                                 return guideTriggers.map((t, index) => {
                                     const done = completedTriggers.has(t.id);
+                                    const depsArray = Array.isArray(t.dependsOn) ? t.dependsOn : (t.dependsOn ? [t.dependsOn] : [])
+                                    const isBlocked = depsArray.length > 0 && depsArray.some(depId => !completedTriggers.has(depId))
 
                                     // Fallback hints if empty
                                     let autoHint = t.hint;
@@ -1024,7 +1071,7 @@ export default function PreviewMode({ nodes, edges, globalConfig = {}, onExit })
                                     return (
                                         <div key={t.id} style={{
                                             display: 'flex', alignItems: 'flex-start', gap: 8,
-                                            opacity: done ? 0.4 : 1,
+                                            opacity: done ? 0.4 : (isBlocked ? 0.6 : 1),
                                             transition: 'all 300ms ease',
                                         }}>
                                             <div style={{
@@ -1037,11 +1084,32 @@ export default function PreviewMode({ nodes, edges, globalConfig = {}, onExit })
                                             </div>
                                             <div style={{
                                                 fontSize: 12, color: done ? 'var(--color-text-muted)' : 'var(--color-text-primary)',
-                                                textDecoration: done ? 'line-through' : 'none', lineHeight: 1.4
+                                                textDecoration: done ? 'line-through' : 'none', lineHeight: 1.4, flex: 1
                                             }}>
                                                 <span style={{ fontWeight: 600, marginRight: 4 }}>Paso {index + 1}:</span>
                                                 {autoHint}
                                             </div>
+                                            {!done && !isBlocked && (
+                                                <button
+                                                    onClick={() => handleHighlightTrigger(t.id)}
+                                                    title="Ver dónde hacer clic"
+                                                    style={{
+                                                        background: 'transparent', border: 'none', cursor: 'pointer',
+                                                        color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        padding: '4px', borderRadius: '4px'
+                                                    }}
+                                                    onMouseEnter={e => {
+                                                        e.currentTarget.style.color = 'var(--color-brand)';
+                                                        e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                                                    }}
+                                                    onMouseLeave={e => {
+                                                        e.currentTarget.style.color = 'var(--color-text-muted)';
+                                                        e.currentTarget.style.background = 'transparent';
+                                                    }}
+                                                >
+                                                    <Eye size={12} />
+                                                </button>
+                                            )}
                                         </div>
                                     );
                                 });
@@ -1131,35 +1199,35 @@ export default function PreviewMode({ nodes, edges, globalConfig = {}, onExit })
                         }}>
                             {/* Decorative corners (SVG) */}
                             <svg style={{ position: 'absolute', top: 0, left: 0, width: 250, height: 250, pointerEvents: 'none' }} viewBox="0 0 100 100" preserveAspectRatio="none">
-                                <path d="M0 0 L100 0 C50 20 20 50 0 100 Z" fill="#EAB308" opacity="0.9" />
-                                <path d="M0 0 L80 0 C40 15 15 40 0 80 Z" fill="#1E3A8A" />
+                                <path d="M0 0 L100 0 C50 20 20 50 0 100 Z" fill={data.certColorAccent || '#EAB308'} opacity="0.9" />
+                                <path d="M0 0 L80 0 C40 15 15 40 0 80 Z" fill={data.certColorPrimary || '#1E3A8A'} />
                             </svg>
                             <svg style={{ position: 'absolute', bottom: 0, right: 0, width: 250, height: 250, pointerEvents: 'none' }} viewBox="0 0 100 100" preserveAspectRatio="none">
-                                <path d="M100 100 L0 100 C50 80 80 50 100 0 Z" fill="#EAB308" opacity="0.9" />
-                                <path d="M100 100 L20 100 C60 85 85 60 100 20 Z" fill="#1E3A8A" />
+                                <path d="M100 100 L0 100 C50 80 80 50 100 0 Z" fill={data.certColorAccent || '#EAB308'} opacity="0.9" />
+                                <path d="M100 100 L20 100 C60 85 85 60 100 20 Z" fill={data.certColorPrimary || '#1E3A8A'} />
                             </svg>
                             {/* Ribbon top right */}
                             <svg style={{ position: 'absolute', top: 0, right: 40, width: 50, height: 80, pointerEvents: 'none' }} viewBox="0 0 50 80" preserveAspectRatio="none">
-                                <path d="M0 0 L50 0 L50 80 L25 60 L0 80 Z" fill="#EAB308" />
+                                <path d="M0 0 L50 0 L50 80 L25 60 L0 80 Z" fill={data.certColorAccent || '#EAB308'} />
                             </svg>
 
                             {/* Seal / Badge */}
                             <div style={{
                                 position: 'absolute', right: 60, top: '45%', transform: 'translateY(-50%)',
-                                width: 110, height: 110, borderRadius: '50%', background: '#1E3A8A',
+                                width: 110, height: 110, borderRadius: '50%', background: data.certColorPrimary || '#1E3A8A',
                                 display: 'none', /* Hidden on mobile by default, shown via media query if needed or just kept flex */
-                                border: '3px solid #EAB308', color: '#EAB308',
+                                border: `3px solid ${data.certColorAccent || '#EAB308'}`, color: data.certColorAccent || '#EAB308',
                                 boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
                             }} className="cert-seal">
                                 <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%', padding: 12 }}>
                                     <path id="curve" d="M 20 50 A 30 30 0 1 1 80 50 A 30 30 0 1 1 20 50" fill="transparent" />
-                                    <text fontSize="10" fontWeight="bold" fill="#EAB308" letterSpacing="2">
+                                    <text fontSize="10" fontWeight="bold" fill={data.certColorAccent || '#EAB308'} letterSpacing="2">
                                         <textPath href="#curve" startOffset="50%" textAnchor="middle">
                                             SELLO DE EXCELENCIA
                                         </textPath>
                                     </text>
                                     {/* Inner star/logo */}
-                                    <polygon points="50,30 55,40 65,42 58,50 60,60 50,55 40,60 42,50 35,42 45,40" fill="#EAB308" />
+                                    <polygon points="50,30 55,40 65,42 58,50 60,60 50,55 40,60 42,50 35,42 45,40" fill={data.certColorAccent || '#EAB308'} />
                                 </svg>
                             </div>
 
@@ -1172,7 +1240,7 @@ export default function PreviewMode({ nodes, edges, globalConfig = {}, onExit })
                                 </h1>
                                 <h2 style={{
                                     margin: 0, fontSize: 'clamp(16px, 2.5vw, 22px)', fontWeight: 700,
-                                    color: '#1E3A8A', letterSpacing: '0.1em', textTransform: 'uppercase'
+                                    color: data.certColorPrimary || '#1E3A8A', letterSpacing: '0.1em', textTransform: 'uppercase'
                                 }}>
                                     {data.certSubtitle ?? 'DE RECONOCIMIENTO'}
                                 </h2>
@@ -1221,13 +1289,13 @@ export default function PreviewMode({ nodes, edges, globalConfig = {}, onExit })
                             <button
                                 onClick={onExit}
                                 style={{
-                                    marginTop: 30, padding: '12px 32px', borderRadius: 8, background: '#1E3A8A',
+                                    marginTop: 30, padding: '12px 32px', borderRadius: 8, background: data.certColorPrimary || '#1E3A8A',
                                     color: 'white', fontWeight: 600, fontSize: 15, border: 'none',
-                                    cursor: 'pointer', boxShadow: '0 4px 14px rgba(30, 58, 138, 0.4)',
+                                    cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.4)',
                                     transition: 'transform 150ms, box-shadow 150ms', zIndex: 1
                                 }}
-                                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(30, 58, 138, 0.6)' }}
-                                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(30, 58, 138, 0.4)' }}
+                                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.6)' }}
+                                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.4)' }}
                             >
                                 Finalizar y Volver
                             </button>
@@ -1251,10 +1319,7 @@ export default function PreviewMode({ nodes, edges, globalConfig = {}, onExit })
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         backgroundColor: '#0a0d12',
                         backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(124, 92, 252, 0.15) 0%, transparent 50%), radial-gradient(circle at 100% 100%, rgba(46, 165, 103, 0.1) 0%, transparent 50%)',
-                        transition: 'opacity 280ms ease-out, transform 280ms ease-out, filter 280ms ease-out',
-                        opacity: transitioning ? 0 : 1,
-                        transform: transitioning ? 'scale(0.98)' : 'scale(1)',
-                        filter: transitioning ? 'blur(3px)' : 'blur(0)',
+                        ...getTransitionStyles()
                     }}>
                         <div style={{
                             width: 420, maxWidth: '90%', padding: 40,
@@ -1382,10 +1447,7 @@ export default function PreviewMode({ nodes, edges, globalConfig = {}, onExit })
                         backgroundSize: 'cover', backgroundPosition: 'center',
                         overflowY: 'auto',
                         overflowX: 'hidden',
-                        transition: 'opacity 280ms ease-out, transform 280ms ease-out, filter 280ms ease-out',
-                        opacity: transitioning ? 0 : 1,
-                        transform: transitioning ? 'scale(0.98)' : 'scale(1)',
-                        filter: transitioning ? 'blur(3px)' : 'blur(0)',
+                        ...getTransitionStyles()
                     }}>
                         {data.image ? (
                             <div ref={imgWrapperRef} style={{ position: 'relative', width: '100%', margin: 'auto 0', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
