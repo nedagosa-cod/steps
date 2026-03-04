@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react'
-import { Upload, MousePointer, Keyboard, Info, Image, Video, Trash2, GripVertical, ChevronDown, ChevronUp, TextCursorInput, List, ListTree, Plus, ImageIcon, CircleDot, CheckSquare } from 'lucide-react'
+import { Upload, MousePointer, Keyboard, Info, Image, Video, Trash2, GripVertical, ChevronDown, ChevronUp, TextCursorInput, List, ListTree, Plus, ImageIcon, CircleDot, CheckSquare, CalendarDays } from 'lucide-react'
 import { normalizeTriggers, makeDefaultTrigger, TRIGGER_COLORS, TRIGGER_LABELS } from '../utils/triggers'
 
 /* ── Atoms ── */
@@ -84,7 +84,7 @@ function TriggerCard({
     trigger, index, allTriggers, nodes,
     onUpdate, onDelete,
     isExpanded, onToggleExpand,
-    draggableProps
+    draggableProps, onOpenScrollLibrary
 }) {
     const [showAdvanced, setShowAdvanced] = useState(false)
     const hs = trigger.hotspot || { x: 30, y: 40, w: 20, h: 10 }
@@ -144,6 +144,7 @@ function TriggerCard({
                         { value: 'scroll_area', icon: GripVertical, label: 'Área Scroll' },
                         { value: 'radio', icon: CircleDot, label: 'Radio' },
                         { value: 'checkbox', icon: CheckSquare, label: 'Checkbox' },
+                        { value: 'input_date', icon: CalendarDays, label: 'Calendario' },
                     ].map(({ value, icon: Icon, label }) => {
                         const active = trigger.type === value
                         const c = TRIGGER_COLORS[value] || TRIGGER_COLORS.click
@@ -283,6 +284,38 @@ function TriggerCard({
                         </div>
                     )}
 
+                    {trigger.type === 'input_date' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div>
+                                <FieldLabel>Fecha requerida para poder avanzar</FieldLabel>
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type="date"
+                                        value={trigger.validationValue || ''}
+                                        onChange={e => onUpdate({ validationValue: e.target.value })}
+                                        style={{
+                                            width: '100%',
+                                            background: 'var(--color-control)',
+                                            border: '1px solid var(--color-border)',
+                                            borderRadius: 6, padding: '6px 10px',
+                                            fontSize: 12,
+                                            color: 'var(--color-text-primary)', outline: 'none',
+                                            transition: 'border-color 150ms ease-out',
+                                            colorScheme: 'dark'
+                                        }}
+                                        onFocus={e => e.target.style.borderColor = colors.label}
+                                        onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
+                                    />
+                                    {!trigger.validationValue && (
+                                        <div style={{ position: 'absolute', right: 35, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: 'var(--color-text-muted)', pointerEvents: 'none' }}>
+                                            (Cualquier fecha)
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {trigger.type === 'keypress' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                             <div>
@@ -381,11 +414,8 @@ function TriggerCard({
 
                                     <button
                                         onClick={() => {
-                                            const savedImg = localStorage.getItem('simubuild_scroll_image');
-                                            if (savedImg) {
-                                                onUpdate({ contentImage: savedImg });
-                                            } else {
-                                                alert("No hay ninguna imagen guardada en el Creador de Scroll. Ábrelo desde el menú superior primero.");
+                                            if (onOpenScrollLibrary) {
+                                                onOpenScrollLibrary((dataUrl) => onUpdate({ contentImage: dataUrl }))
                                             }
                                         }}
                                         style={{
@@ -398,7 +428,7 @@ function TriggerCard({
                                         onMouseEnter={e => e.currentTarget.style.background = 'var(--color-control)'}
                                         onMouseLeave={e => e.currentTarget.style.background = 'var(--color-raised)'}
                                     >
-                                        <ImageIcon size={14} color="var(--color-brand)" /> Cargar desde Creador
+                                        <ImageIcon size={14} color="var(--color-brand)" /> Seleccionar de Biblioteca
                                     </button>
                                 </div>
                             )}
@@ -884,7 +914,7 @@ function TriggerCard({
 }
 
 /* ── Main component ── */
-export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage, activeTab = 'node' }) {
+export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage, activeTab = 'node', onOpenScrollLibrary }) {
     const fileInputRef = useRef(null)
     const [draggedIdx, setDraggedIdx] = useState(null)
     const [dragOverIdx, setDragOverIdx] = useState(null)
@@ -958,6 +988,8 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage
 
     // Helper to get array of images
     const imageSegments = data.image ? (Array.isArray(data.image) ? data.image : [data.image]) : []
+
+    const isResult = node.type === 'resultNode' || data.type === 'resultNode'
 
     if (node.type === 'authNode') {
         return (
@@ -1097,6 +1129,105 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage
                         placeholder="Pantalla sin nombre"
                     />
                 </div>
+
+                <Divider label="Temporizador Global" />
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                        <input
+                            type="checkbox"
+                            checked={data.timerStart || false}
+                            onChange={(e) => update({ timerStart: e.target.checked, timerEnd: e.target.checked ? false : data.timerEnd })}
+                            style={{ cursor: 'pointer', accentColor: 'var(--color-brand)' }}
+                        />
+                        <span style={{ fontSize: 11, color: 'var(--color-text-primary)' }}>Iniciar Temporizador Aquí</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                        <input
+                            type="checkbox"
+                            checked={data.timerEnd || false}
+                            onChange={(e) => update({ timerEnd: e.target.checked, timerStart: e.target.checked ? false : data.timerStart })}
+                            style={{ cursor: 'pointer', accentColor: 'var(--color-brand)' }}
+                        />
+                        <span style={{ fontSize: 11, color: 'var(--color-text-primary)' }}>Detener Temporizador Aquí</span>
+                    </label>
+                </div>
+
+                {isResult && (
+                    <>
+                        <Divider label="Textos del Certificado" />
+                        <div>
+                            <FieldLabel>Título Principal</FieldLabel>
+                            <TextInput
+                                value={data.certTitle ?? 'CERTIFICADO'}
+                                onChange={e => update({ certTitle: e.target.value })}
+                                placeholder="CERTIFICADO"
+                            />
+                        </div>
+                        <div>
+                            <FieldLabel>Subtítulo</FieldLabel>
+                            <TextInput
+                                value={data.certSubtitle ?? 'DE RECONOCIMIENTO'}
+                                onChange={e => update({ certSubtitle: e.target.value })}
+                                placeholder="DE RECONOCIMIENTO"
+                            />
+                        </div>
+                        <div>
+                            <FieldLabel>Aclaración previa al nombre</FieldLabel>
+                            <TextInput
+                                value={data.certPreName ?? 'OTORGADO A:'}
+                                onChange={e => update({ certPreName: e.target.value })}
+                                placeholder="OTORGADO A:"
+                            />
+                        </div>
+                        <div>
+                            <FieldLabel>Descripción / Razón</FieldLabel>
+                            <textarea
+                                value={data.certDescription ?? 'Por haber completado satisfactoriamente 120 horas del Diplomado...'}
+                                onChange={e => update({ certDescription: e.target.value })}
+                                placeholder="Por haber completado..."
+                                style={{
+                                    width: '100%', height: 60,
+                                    background: 'var(--color-control)',
+                                    border: '1px solid var(--color-border)',
+                                    borderRadius: 6, padding: '6px 10px',
+                                    fontSize: 12, resize: 'vertical',
+                                    color: 'var(--color-text-primary)', outline: 'none',
+                                }}
+                            />
+                        </div>
+
+                        <Divider label="Firmas" />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                <FieldLabel>Firma 1 (Izquierda)</FieldLabel>
+                                <TextInput
+                                    value={data.signature1Name ?? 'LIC. HORACIO OLIVO'}
+                                    onChange={e => update({ signature1Name: e.target.value })}
+                                    placeholder="Nombre"
+                                />
+                                <TextInput
+                                    value={data.signature1Title ?? 'Director de Administración'}
+                                    onChange={e => update({ signature1Title: e.target.value })}
+                                    placeholder="Cargo"
+                                />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                <FieldLabel>Firma 2 (Derecha)</FieldLabel>
+                                <TextInput
+                                    value={data.signature2Name ?? 'LIC. CARLA RODRÍGUEZ'}
+                                    onChange={e => update({ signature2Name: e.target.value })}
+                                    placeholder="Nombre"
+                                />
+                                <TextInput
+                                    value={data.signature2Title ?? 'Directora de Negocios'}
+                                    onChange={e => update({ signature2Title: e.target.value })}
+                                    placeholder="Cargo"
+                                />
+                            </div>
+                        </div>
+                    </>
+                )}
             </>)}
 
             {activeTab === 'media' && (<>
@@ -1296,6 +1427,7 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage
                                         isExpanded={isExpanded}
                                         onToggleExpand={() => setExpandedState(prev => ({ ...prev, [trigger.id]: !isExpanded }))}
                                         draggableProps={draggableProps}
+                                        onOpenScrollLibrary={onOpenScrollLibrary}
                                     />
                                     {idx < triggers.length - 1 && (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: isDragged ? 0.4 : 1 }}>
@@ -1332,6 +1464,7 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage
                         <AddBtn onClick={() => addTrigger('scroll_area')} icon={GripVertical} label="+ Área Scroll" color={TRIGGER_COLORS.scroll_area.label} />
                         <AddBtn onClick={() => addTrigger('radio')} icon={CircleDot} label="+ Radio" color={TRIGGER_COLORS.radio.label} />
                         <AddBtn onClick={() => addTrigger('checkbox')} icon={CheckSquare} label="+ Checkbox" color={TRIGGER_COLORS.checkbox.label} />
+                        <AddBtn onClick={() => addTrigger('input_date')} icon={CalendarDays} label="+ Calendario" color={TRIGGER_COLORS.input_date.label} />
                     </div>
                 </div>
             </>)}

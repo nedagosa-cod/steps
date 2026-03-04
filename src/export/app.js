@@ -20,7 +20,7 @@
     };
 
     // ── Data ──────────────────────────────────────────────────
-    const { nodes, edges } = window.SIM_DATA;
+    const { nodes, edges, globalConfig = {} } = window.SIM_DATA;
     const getNode = (id) => nodes.find(n => n.id === id);
 
     // ── Compute node traversal order ─────────────────────────
@@ -38,6 +38,9 @@
     let completedTriggers = new Set();
     let inputValues = {};
     let isTransitioning = false;
+    let timeRemaining = null;
+    let timerRef = null;
+    let hasTimerStarted = false;
 
     // ── DOM refs ─────────────────────────────────────────────
     const elScreenName = document.getElementById("ui-screen-name");
@@ -50,6 +53,8 @@
     const elPracticeGuide = document.getElementById("ui-practice-guide");
     const elPracticeContent = document.getElementById("ui-practice-guide-content");
     const elHud = document.getElementById("hud");
+    const elTimer = document.getElementById("ui-timer");
+    const elTimerValue = document.getElementById("ui-timer-value");
     const elBtnFullscreen = document.getElementById("btn-fullscreen");
     const elBtnExit = document.getElementById("btn-exit");
 
@@ -127,7 +132,8 @@
         elError.style.display = "none";
         elSuccess.style.display = "none";
         completedTriggers = new Set();
-        inputValues = {};
+        const preservedAuthName = inputValues["auth_name"] || "";
+        inputValues = { "auth_name": preservedAuthName };
 
         setTimeout(() => {
             currentNodeId = targetId;
@@ -322,6 +328,50 @@
                 const sp = document.createElement("span");
                 sp.textContent = "✓"; sp.style.cssText = "font-size:14px;color:#5ac98a";
                 ck.appendChild(sp); wrap.appendChild(ck);
+            }
+            el.appendChild(wrap);
+        }
+
+        // ── Input Date (Calendar) ────────────────────────────
+        else if (t.type === "input_date") {
+            el.style.overflow = "hidden";
+            if (!isDone) el.style.border = t.hidden ? "none" : ("1.5px solid " + colors.borderActive);
+
+            const wrap = document.createElement("div");
+            wrap.style.cssText = "position:relative;width:100%;height:100%";
+
+            const input = document.createElement("input");
+            input.type = "date";
+            input.value = inputValues[t.id] || "";
+            input.disabled = isBlocked;
+
+            input.style.cssText = `
+                width:100%; height:100%; border:none; outline:none;
+                background:${t.hidden ? 'transparent' : (isDone ? 'rgba(46,165,103,0.15)' : 'rgba(10,13,18,0.75)')};
+                color:${t.hidden ? 'var(--color-text-primary)' : (isDone ? '#5ac98a' : '#e2eaf4')};
+                font-size:${t.fontSize ? t.fontSize + 'px' : 'clamp(11px, 1.3vw, 16px)'};
+                padding:0 6px; font-family:inherit; color-scheme:dark;
+            `;
+
+            input.addEventListener("change", (e) => {
+                const val = e.target.value;
+                inputValues[t.id] = val;
+                if (!isBlocked && !isDone) {
+                    if (!t.validationValue || val === t.validationValue) {
+                        handleTriggerComplete(t.id, triggers);
+                    } else if (t.validationValue && val !== t.validationValue) {
+                        showError();
+                    }
+                }
+            });
+
+            wrap.appendChild(input);
+
+            if (isDone && !t.hidden) {
+                const check = document.createElement("div");
+                check.style.cssText = "position:absolute;right:28px;top:50%;transform:translateY(-50%);font-size:14px;color:#5ac98a;pointer-events:none;";
+                check.textContent = "✓";
+                wrap.appendChild(check);
             }
             el.appendChild(wrap);
         }
@@ -633,11 +683,70 @@
         pillsHtml += '<span class="step-counter">' + (stepIndex + 1) + '/' + order.length + '</span>';
         elStepIndicator.innerHTML = pillsHtml;
 
+        // ── Lógica del Temporizador ──────────────────────────
+        const min = globalConfig.timerMin;
+        const max = globalConfig.timerMax;
+
+        if ((!min || min <= 0) && (!max || max <= 0)) {
+            if (timerRef) clearInterval(timerRef);
+            timerRef = null;
+            elTimer.style.display = "none";
+            hasTimerStarted = false;
+        } else if (node.type === "authNode" || elSuccess.style.display === "flex") {
+            elTimer.style.display = "none";
+        } else {
+            if (node.data?.timerEnd) {
+                if (timerRef) {
+                    clearInterval(timerRef);
+                    timerRef = null;
+                }
+            } else if (node.data?.timerStart && !hasTimerStarted) {
+                hasTimerStarted = true;
+                let timeToSet = 0;
+                if (min > 0 && max > 0 && max >= min) {
+                    timeToSet = Math.floor(Math.random() * (max - min + 1)) + min;
+                } else if (max > 0) {
+                    timeToSet = max;
+                } else if (min > 0) {
+                    timeToSet = min;
+                }
+
+                timeRemaining = timeToSet;
+                if (timeToSet > 0) {
+                    if (timerRef) clearInterval(timerRef);
+                    timerRef = setInterval(() => {
+                        timeRemaining--;
+                        if (timeRemaining <= 0) {
+                            clearInterval(timerRef);
+                            timerRef = null;
+                            timeRemaining = 0;
+                            elTimerValue.textContent = 0;
+                            elTimer.className = "hud-timer danger";
+                        } else {
+                            elTimerValue.textContent = timeRemaining;
+                            elTimer.className = timeRemaining <= 5 ? "hud-timer danger" : "hud-timer";
+                        }
+                    }, 1000);
+                }
+            }
+
+            if (hasTimerStarted && timeRemaining !== null) {
+                elTimer.style.display = "flex";
+                elTimerValue.textContent = timeRemaining;
+                elTimer.className = timeRemaining <= 5 ? "hud-timer danger" : "hud-timer";
+            }
+        }
+
         // ── Canvas content ───────────────────────────────────
         elImageWrapper.innerHTML = "";
 
         if (node.type === "authNode") {
             renderAuthNode(data);
+            return;
+        }
+
+        if (node.type === "resultNode") {
+            renderResultNode(data);
             return;
         }
 
@@ -661,7 +770,7 @@
                 // Image stack
                 const imgArray = Array.isArray(data.image) ? data.image : [data.image];
                 const outerWrap = document.createElement("div");
-                outerWrap.style.cssText = "position:relative;width:100%;max-width:100%;margin:0 auto";
+                outerWrap.style.cssText = "position:relative;width:100%;margin:auto 0;display:flex;flex-direction:column;align-items:center";
 
                 const imgCol = document.createElement("div");
                 imgCol.style.cssText = "display:flex;flex-direction:column;width:100%";
@@ -805,6 +914,136 @@
         elImageWrapper.appendChild(backdrop);
     }
 
+    // ── Result Node renderer (Certificado) ───────────────────
+    function renderResultNode(data) {
+        const participantName = inputValues["auth_name"] ? inputValues["auth_name"].trim() : "Nombre del Participante";
+
+        const wrap = document.createElement("div");
+        wrap.style.cssText = "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(10,13,18,0.85);backdrop-filter:blur(12px);animation:fadeIn 0.5s ease-out";
+
+        const isPractice = sessionStorage.getItem("isPracticeMode") === "true";
+        let htmlContent = "";
+
+        if (isPractice) {
+            htmlContent = `
+                <div style="background: #ffffff; border-radius: 12px; padding: 40px 60px; max-width: 500px; width: 90%; text-align: center; box-shadow: 0 25px 80px rgba(0,0,0,0.6); display: flex; flex-direction: column; align-items: center; gap: 16px;">
+                    <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(46,165,103,0.1); color: #2ea567; display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    </div>
+                    <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: #111;">Práctica Completada</h2>
+                    <p style="margin: 0; font-size: 15px; color: #555; line-height: 1.5;">
+                        Has finalizado este escenario en Modo Práctica. Esta sesión es formativa y no genera evaluación ni certificado.
+                    </p>
+                    <button id="cert-finish-btn" style="margin-top: 20px; padding: 10px 24px; border-radius: 8px; background: #111; color: white; font-weight: 600; font-size: 14px; border: none; cursor: pointer; transition: transform 150ms;">
+                        Finalizar y Volver
+                    </button>
+                </div>
+            `;
+        } else {
+            // Card structure using string HTML for easier maintenance of complex SVG SVG
+            htmlContent = `
+            <div style="background: #ffffff; border-radius: 12px; padding: 30px 60px; width: 94%; max-width: 900px; min-height: min(90vh, 600px); text-align: center; margin: auto; box-shadow: 0 25px 80px rgba(0,0,0,0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; position: relative; overflow: hidden; color: #1a1a1a;">
+                <!-- Corners -->
+                <svg style="position: absolute; top: 0; left: 0; width: 250px; height: 250px; pointer-events: none;" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <path d="M0 0 L100 0 C50 20 20 50 0 100 Z" fill="#EAB308" opacity="0.9" />
+                    <path d="M0 0 L80 0 C40 15 15 40 0 80 Z" fill="#1E3A8A" />
+                </svg>
+                <svg style="position: absolute; bottom: 0; right: 0; width: 250px; height: 250px; pointer-events: none;" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <path d="M100 100 L0 100 C50 80 80 50 100 0 Z" fill="#EAB308" opacity="0.9" />
+                    <path d="M100 100 L20 100 C60 85 85 60 100 20 Z" fill="#1E3A8A" />
+                </svg>
+                <!-- Ribbon -->
+                <svg style="position: absolute; top: 0; right: 40px; width: 50px; height: 80px; pointer-events: none;" viewBox="0 0 50 80" preserveAspectRatio="none">
+                    <path d="M0 0 L50 0 L50 80 L25 60 L0 80 Z" fill="#EAB308" />
+                </svg>
+
+                <!-- Seal -->
+                <div style="position: absolute; right: 60px; top: 45%; transform: translateY(-50%); width: 110px; height: 110px; border-radius: 50%; background: #1E3A8A; display: none; border: 3px solid #EAB308; color: #EAB308; box-shadow: 0 4px 15px rgba(0,0,0,0.1);" class="cert-seal">
+                    <svg viewBox="0 0 100 100" style="width: 100%; height: 100%; padding: 12px; box-sizing: border-box;">
+                        <path id="curve-seal" d="M 20 50 A 30 30 0 1 1 80 50 A 30 30 0 1 1 20 50" fill="transparent" />
+                        <text font-size="10" font-weight="bold" fill="#EAB308" letter-spacing="2">
+                            <textPath href="#curve-seal" startOffset="50%" text-anchor="middle">SELLO DE EXCELENCIA</textPath>
+                        </text>
+                        <polygon points="50,30 55,40 65,42 58,50 60,60 50,55 40,60 42,50 35,42 45,40" fill="#EAB308" />
+                    </svg>
+                </div>
+
+                <div style="z-index: 1; display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+                    <h1 style="margin: 0; font-size: clamp(32px, 5vw, 42px); font-weight: 900; color: #000000; letter-spacing: 0.05em; text-transform: uppercase;">
+                        ${data.certTitle ?? 'CERTIFICADO'}
+                    </h1>
+                    <h2 style="margin: 0; font-size: clamp(16px, 2.5vw, 22px); font-weight: 700; color: #1E3A8A; letter-spacing: 0.1em; text-transform: uppercase;">
+                        ${data.certSubtitle ?? 'DE RECONOCIMIENTO'}
+                    </h2>
+                </div>
+
+                <div style="z-index: 1; margin-top: 20px;">
+                    <p style="margin: 0; font-size: 16px; font-weight: 600; color: #4b5563; text-transform: uppercase; letter-spacing: 0.05em;">
+                        ${data.certPreName ?? 'OTORGADO A:'}
+                    </p>
+                </div>
+
+                <div style="z-index: 1; width: 85%; padding: 5px 0; border-bottom: 2px solid #1a1a1a; margin: 0 0 10px 0;">
+                    <!-- Requires font Great Vibes -->
+                    <h3 style="margin: 0; font-size: clamp(36px, 6vw, 64px); font-weight: 400; color: #000000; font-family: 'Great Vibes', 'Brush Script MT', 'Alex Brush', cursive; line-height: 1.2;">
+                        ${participantName}
+                    </h3>
+                </div>
+
+                <div style="z-index: 1; max-width: 700px;">
+                    <p style="margin: 0; font-size: clamp(15px, 2vw, 18px); color: #374151; line-height: 1.6; font-weight: 500;">
+                        ${data.certDescription ?? 'Por haber completado satisfactoriamente 120 horas del Diplomado...'}
+                    </p>
+                </div>
+
+                <!-- Signatures -->
+                <div style="z-index: 1; display: flex; justify-content: space-between; width: 100%; margin-top: 20px; gap: 20px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 150px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                        <div style="width: 70%; height: 1px; background: #1a1a1a;"></div>
+                        <p style="margin: 0; font-size: 13px; font-weight: 700; color: #000; text-transform: uppercase;">${data.signature1Name ?? 'LIC. HORACIO OLIVO'}</p>
+                        <p style="margin: 0; font-size: 12px; font-weight: 500; color: #4b5563; font-style: italic;">${data.signature1Title ?? 'Director de Administración'}</p>
+                    </div>
+                    <div style="flex: 1; min-width: 150px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                        <div style="width: 70%; height: 1px; background: #1a1a1a;"></div>
+                        <p style="margin: 0; font-size: 13px; font-weight: 700; color: #000; text-transform: uppercase;">${data.signature2Name ?? 'LIC. CARLA RODRÍGUEZ'}</p>
+                        <p style="margin: 0; font-size: 12px; font-weight: 500; color: #4b5563; font-style: italic;">${data.signature2Title ?? 'Directora de Negocios'}</p>
+                    </div>
+                </div>
+
+                <button id="cert-finish-btn" style="margin-top: 20px; padding: 12px 32px; border-radius: 8px; background: #1E3A8A; color: white; font-weight: 600; font-size: 15px; border: none; cursor: pointer; box-shadow: 0 4px 14px rgba(30,58,138,0.4); transition: transform 150ms, box-shadow 150ms; z-index: 1;">
+                    Finalizar y Volver
+                </button>
+            </div>
+            `;
+        }
+
+        wrap.innerHTML = htmlContent;
+
+        const btn = wrap.querySelector("#cert-finish-btn");
+        btn.onmouseenter = () => { btn.style.transform = "translateY(-2px)"; btn.style.boxShadow = "0 6px 20px rgba(30,58,138,0.6)"; };
+        btn.onmouseleave = () => { btn.style.transform = "translateY(0)"; btn.style.boxShadow = "0 4px 14px rgba(30,58,138,0.4)"; };
+        btn.onclick = () => {
+            showSuccess("El simulador ha terminado exitosamente.");
+        };
+
+        // Inject animation and fonts if not exists
+        if (!document.getElementById("cert-styles")) {
+            const style = document.createElement("style");
+            style.id = "cert-styles";
+            style.textContent = `
+                @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
+                @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+                @media (min-width: 768px) {
+                    .cert-seal { display: flex !important; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        elImageWrapper.innerHTML = "";
+        elImageWrapper.appendChild(wrap);
+    }
+
     // ── Global Keydown Listener ──────────────────────────────
     document.addEventListener("keydown", (e) => {
         if (isTransitioning) return;
@@ -829,6 +1068,21 @@
     });
 
     // ── Boot ─────────────────────────────────────────────────
+
+    // Inyectar el estilo de fondo dinámico si lo hay
+    if (globalConfig.bgType) {
+        if (globalConfig.bgType === 'color' && globalConfig.bgValue) {
+            elImageWrapper.style.backgroundColor = globalConfig.bgValue;
+        } else if (globalConfig.bgType === 'image' && globalConfig.bgValue) {
+            elImageWrapper.style.backgroundImage = `url('${globalConfig.bgValue}')`;
+            elImageWrapper.style.backgroundSize = 'cover';
+            elImageWrapper.style.backgroundPosition = 'center';
+            elImageWrapper.style.backgroundColor = 'transparent';
+        } else if (globalConfig.bgType === 'transparent') {
+            elImageWrapper.style.backgroundColor = 'transparent';
+        }
+    }
+
     render();
 
 })();

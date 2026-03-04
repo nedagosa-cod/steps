@@ -26,7 +26,10 @@
                         </div>
                         <div class="step-pills" id="ui-step-indicator"></div>
                     </div>
-                    <div style="display:flex;gap:6px">
+                    <div style="display:flex;gap:6px;align-items:center;">
+                        <div id="ui-timer" class="hud-timer" style="display:none">
+                            <span class="hud-timer-label">Tiempo:</span> <span id="ui-timer-value"></span>s
+                        </div>
                         <button class="hud-btn hud-btn-icon" id="btn-fullscreen" title="Pantalla completa">⛶</button>
                         <button class="hud-btn hud-btn-text" id="btn-exit" title="Salir">✕ Salir</button>
                     </div>

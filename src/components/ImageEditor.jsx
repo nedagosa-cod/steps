@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import * as fabric from 'fabric'
-import { X, Save, Type, Square, Circle, PenTool, Trash2, Maximize2, Minimize2, Undo2, Redo2, Pipette, Crop, Check } from 'lucide-react'
+import { X, Save, Type, Square, Circle, PenTool, Trash2, Maximize2, Minimize2, Undo2, Redo2, Pipette, Crop, Check, Droplet, SquareDashedBottom, Eraser } from 'lucide-react'
 
 export default function ImageEditor({ imageUrl, onSave, onCancel }) {
     const containerRef = useRef(null)
@@ -10,11 +10,13 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
     const [fillColor, setFillColor] = useState('transparent') // Default transparent
     const [isFillMode, setIsFillMode] = useState(false)
     const [brushSize, setBrushSize] = useState(5)
+    const [blurIntensity, setBlurIntensity] = useState(16) // Default blur radius in px
 
-    // Tools: 'select', 'draw', 'text', 'rect', 'circle', 'crop'
+    // Tools: 'select', 'draw', 'text', 'rect', 'circle', 'crop', 'blur_brush', 'blur_rect'
     const [activeTool, setActiveTool] = useState('select')
     const [isFullscreen, setIsFullscreen] = useState(false)
     const cropRectRef = useRef(null)
+    const blurLayerRef = useRef(null)
 
     // History stack for Undo/Redo
     const [history, setHistory] = useState([])
@@ -69,6 +71,23 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
                     top: c.height / 2
                 })
                 c.backgroundImage = img
+
+                // Create the blurred layer
+                const blurImg = createBlurredLayer(img)
+                blurImg.set({
+                    originX: 'center', originY: 'center',
+                    left: c.width / 2, top: c.height / 2,
+                    selectable: false, evented: false
+                })
+
+                // Group to hold the mask
+                const clipGroup = new fabric.Group([], { absolutePositioned: true })
+                blurImg.clipPath = clipGroup
+                blurLayerRef.current = blurImg
+
+                c.add(blurImg)
+                c.sendObjectToBack(blurImg) // Send to back but above background
+
                 c.renderAll()
 
                 // Initialize history after loading image
@@ -92,7 +111,20 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
     const saveHistoryState = (canvasObj = fabricCanvas) => {
         if (!canvasObj || isHistoryUpdating.current) return
 
-        const json = JSON.stringify(canvasObj.toJSON())
+        isHistoryUpdating.current = true // Prevent infinite loops when removing/adding blur layer
+
+        // Temporarily remove blur layer to prevent serializing a huge image twice
+        const blurLyr = blurLayerRef.current
+        if (blurLyr) canvasObj.remove(blurLyr)
+
+        const json = JSON.stringify(canvasObj.toJSON(['isBlurShape']))
+
+        if (blurLyr) {
+            canvasObj.add(blurLyr)
+            canvasObj.sendObjectToBack(blurLyr)
+        }
+
+        isHistoryUpdating.current = false
 
         setHistory(prev => {
             const newHistory = prev.slice(0, historyIndex + 1)
@@ -102,24 +134,107 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
         })
     }
 
-    // Attach canvas events to autosave history
+    // Helper: Create a heavily blurred version of the background image
+    const createBlurredLayer = (sourceImg, intensity = blurIntensity) => {
+        const offscreen = document.createElement('canvas')
+        offscreen.width = sourceImg.width
+        offscreen.height = sourceImg.height
+        const ctx = offscreen.getContext('2d')
+        ctx.filter = `blur(${intensity}px)`
+        ctx.drawImage(sourceImg.getElement(), 0, 0, offscreen.width, offscreen.height)
+
+        const fabricImg = new fabric.Image(offscreen, {
+            scaleX: sourceImg.scaleX,
+            scaleY: sourceImg.scaleY
+        })
+        return fabricImg
+    }
+
+    // Effect to update blur intensity dynamically
+    useEffect(() => {
+        if (!fabricCanvas || !blurLayerRef.current) return
+
+        const bg = fabricCanvas.backgroundImage
+        if (!bg) return
+
+        // Temporarily detach old clipPath
+        const oldClipPath = blurLayerRef.current.clipPath
+        fabricCanvas.remove(blurLayerRef.current)
+
+        const newBlurImg = createBlurredLayer(bg, blurIntensity)
+        newBlurImg.set({
+            originX: 'center', originY: 'center',
+            left: fabricCanvas.width / 2, top: fabricCanvas.height / 2,
+            selectable: false, evented: false
+        })
+
+        // Reattach old mask
+        newBlurImg.clipPath = oldClipPath
+        blurLayerRef.current = newBlurImg
+
+        fabricCanvas.add(newBlurImg)
+        fabricCanvas.sendObjectToBack(newBlurImg)
+        fabricCanvas.renderAll()
+    }, [blurIntensity]) // Specifically run only when intensity changes
+
+    // Helper: Sync blur shapes to the mask
+    const syncBlurLayer = () => {
+        if (!fabricCanvas || !blurLayerRef.current) return
+
+        const shapes = fabricCanvas.getObjects().filter(o => o.isBlurShape)
+
+        // Clone shapes securely for the clipGroup
+        Promise.all(shapes.map(s => s.clone())).then(clonedShapes => {
+            clonedShapes.forEach((c, idx) => {
+                const original = shapes[idx]
+                // Make the clone solid so it masks the blur fully, regardless of drawing opacity
+                c.set({
+                    fill: original.fill === 'transparent' ? 'transparent' : 'black',
+                    stroke: original.stroke ? 'black' : null,
+                    opacity: 1,
+                    absolutePositioned: true
+                })
+            })
+            const group = new fabric.Group(clonedShapes, { absolutePositioned: true })
+            blurLayerRef.current.clipPath = group
+            fabricCanvas.renderAll()
+        })
+    }
+
+    // Attach canvas events to autosave history and sync blur
     useEffect(() => {
         if (!fabricCanvas) return
 
-        const handleModify = () => saveHistoryState()
+        const handleModify = (e) => {
+            if (e.target && e.target.isBlurShape) syncBlurLayer()
+            saveHistoryState()
+        }
+
+        const handlePathCreated = (e) => {
+            if (activeTool === 'blur_brush') {
+                e.path.set({
+                    isBlurShape: true,
+                    opacity: 0.4, // Semi-transparent grey in the UI so user sees what they drew
+                    stroke: '#888888',
+                    globalCompositeOperation: 'source-over'
+                })
+                syncBlurLayer()
+            }
+            saveHistoryState()
+        }
 
         fabricCanvas.on('object:added', handleModify)
         fabricCanvas.on('object:modified', handleModify)
         fabricCanvas.on('object:removed', handleModify)
-        fabricCanvas.on('path:created', handleModify)
+        fabricCanvas.on('path:created', handlePathCreated)
 
         return () => {
             fabricCanvas.off('object:added', handleModify)
             fabricCanvas.off('object:modified', handleModify)
             fabricCanvas.off('object:removed', handleModify)
-            fabricCanvas.off('path:created', handleModify)
+            fabricCanvas.off('path:created', handlePathCreated)
         }
-    }, [fabricCanvas, historyIndex]) // Re-bind when historyIndex changes to slice correctly
+    }, [fabricCanvas, historyIndex, activeTool]) // Re-bind when historyIndex changes to slice correctly
 
 
     // 2. Toolbar Actions
@@ -130,7 +245,15 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
         const prevIndex = historyIndex - 1
         const json = history[prevIndex]
 
+        const blurLyr = blurLayerRef.current
+        if (blurLyr) fabricCanvas.remove(blurLyr)
+
         fabricCanvas.loadFromJSON(json, () => {
+            if (blurLyr) {
+                fabricCanvas.add(blurLyr)
+                fabricCanvas.sendObjectToBack(blurLyr)
+                syncBlurLayer() // re-sync clip mask after loading objects
+            }
             fabricCanvas.renderAll()
             setHistoryIndex(prevIndex)
             isHistoryUpdating.current = false
@@ -144,7 +267,15 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
         const nextIndex = historyIndex + 1
         const json = history[nextIndex]
 
+        const blurLyr = blurLayerRef.current
+        if (blurLyr) fabricCanvas.remove(blurLyr)
+
         fabricCanvas.loadFromJSON(json, () => {
+            if (blurLyr) {
+                fabricCanvas.add(blurLyr)
+                fabricCanvas.sendObjectToBack(blurLyr)
+                syncBlurLayer()
+            }
             fabricCanvas.renderAll()
             setHistoryIndex(nextIndex)
             isHistoryUpdating.current = false
@@ -167,6 +298,19 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
                         left: fabricCanvas.width / 2, top: fabricCanvas.height / 2
                     })
                     fabricCanvas.backgroundImage = img
+
+                    const blurImg = createBlurredLayer(img)
+                    blurImg.set({
+                        originX: 'center', originY: 'center',
+                        left: fabricCanvas.width / 2, top: fabricCanvas.height / 2,
+                        selectable: false, evented: false
+                    })
+                    const clipGroup = new fabric.Group([], { absolutePositioned: true })
+                    blurImg.clipPath = clipGroup
+                    blurLayerRef.current = blurImg
+                    fabricCanvas.add(blurImg)
+                    fabricCanvas.sendObjectToBack(blurImg)
+
                     fabricCanvas.renderAll()
                     saveHistoryState()
                 })
@@ -200,7 +344,7 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
         fabricCanvas.renderAll()
     }
 
-    const addRect = () => {
+    const addRect = (isBlur = false) => {
         if (!fabricCanvas) return
         setActiveTool('select')
         fabricCanvas.isDrawingMode = false
@@ -210,15 +354,17 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
             top: fabricCanvas.height / 2,
             originX: 'center',
             originY: 'center',
-            fill: fillColor,
-            stroke: color === 'transparent' ? null : color,
-            strokeWidth: color === 'transparent' ? 0 : brushSize,
+            fill: isBlur ? 'rgba(128,128,128,0.4)' : fillColor,
+            stroke: isBlur ? null : (color === 'transparent' ? null : color),
+            strokeWidth: isBlur ? 0 : (color === 'transparent' ? 0 : brushSize),
             width: 100,
-            height: 100
+            height: 100,
+            isBlurShape: isBlur
         })
         fabricCanvas.add(rect)
         fabricCanvas.setActiveObject(rect)
         fabricCanvas.renderAll()
+        if (isBlur) syncBlurLayer()
     }
 
     const addCircle = () => {
@@ -252,7 +398,7 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
             fabricCanvas.renderAll()
         }
 
-        if (activeTool === 'draw') {
+        if (activeTool === 'draw' || activeTool === 'blur_brush') {
             fabricCanvas.isDrawingMode = true
 
             // In Fabric v6, freeDrawingBrush might not be initialized by default
@@ -260,8 +406,13 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
                 fabricCanvas.freeDrawingBrush = new fabric.PencilBrush(fabricCanvas)
             }
 
-            fabricCanvas.freeDrawingBrush.color = color
-            fabricCanvas.freeDrawingBrush.width = brushSize
+            if (activeTool === 'blur_brush') {
+                fabricCanvas.freeDrawingBrush.color = 'rgba(128,128,128,0.4)'
+                fabricCanvas.freeDrawingBrush.width = Math.max(brushSize * 4, 20) // Blur brush should be fat
+            } else {
+                fabricCanvas.freeDrawingBrush.color = color
+                fabricCanvas.freeDrawingBrush.width = brushSize
+            }
 
             // Deactivate objects
             fabricCanvas.discardActiveObject()
@@ -374,6 +525,11 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
         if (!fabricCanvas) return
         // Discard active object so selection handles don't get saved
         fabricCanvas.discardActiveObject()
+
+        // Hide UI blur shapes so only the true blurred background shines through
+        const blurShapes = fabricCanvas.getObjects().filter(o => o.isBlurShape)
+        blurShapes.forEach(s => s.set({ opacity: 0 }))
+
         fabricCanvas.renderAll()
 
         // Export only the bounding box of the background image, or the whole canvas if none
@@ -382,8 +538,8 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
 
         if (bg) {
             dataUrl = fabricCanvas.toDataURL({
-                format: 'png',
-                quality: 1,
+                format: 'jpeg',
+                quality: 0.95,
                 left: bg.left - (bg.width * bg.scaleX) / 2,
                 top: bg.top - (bg.height * bg.scaleY) / 2,
                 width: bg.width * bg.scaleX,
@@ -391,8 +547,12 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
                 multiplier: 1 / bg.scaleX // Save at original scale loosely
             })
         } else {
-            dataUrl = fabricCanvas.toDataURL({ format: 'png', quality: 1 })
+            dataUrl = fabricCanvas.toDataURL({ format: 'jpeg', quality: 0.95 })
         }
+
+        // Restore UI blur shapes
+        blurShapes.forEach(s => s.set({ opacity: 0.4 }))
+        fabricCanvas.renderAll()
 
         onSave(dataUrl)
     }
@@ -448,9 +608,29 @@ export default function ImageEditor({ imageUrl, onSave, onCancel }) {
                         <ToolBtn active={activeTool === 'select'} onClick={() => setActiveTool('select')} icon={<Maximize2 size={16} />} title="Seleccionar/Mover" />
                         <ToolBtn active={activeTool === 'draw'} onClick={() => setActiveTool('draw')} icon={<PenTool size={16} />} title="Dibujar libremente" />
                         <ToolBtn onClick={addText} icon={<Type size={16} />} title="Agregar texto" />
-                        <ToolBtn onClick={addRect} icon={<Square size={16} />} title="Agregar cuadrado" />
+                        <ToolBtn onClick={() => addRect(false)} icon={<Square size={16} />} title="Agregar cuadrado" />
                         <ToolBtn onClick={addCircle} icon={<Circle size={16} />} title="Agregar círculo" />
                         <div style={{ width: 1, height: 20, background: 'var(--color-border)', margin: '0 4px' }} />
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <ToolBtn active={activeTool === 'blur_brush'} onClick={() => setActiveTool('blur_brush')} icon={<Droplet size={16} />} title="Pincel para Desenfocar" style={{ color: activeTool === 'blur_brush' ? 'white' : '#5ac8fa' }} />
+                            <ToolBtn onClick={() => addRect(true)} icon={<SquareDashedBottom size={16} />} title="Recuadro de Desenfoque" style={{ color: '#5ac8fa' }} />
+                            {/* Blur Intensity Slider */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: 8, marginLeft: 2 }}>
+                                <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', fontWeight: 600 }}>Nivel: {blurIntensity}</span>
+                                <input
+                                    type="range"
+                                    min="2" max="40" step="1"
+                                    value={blurIntensity}
+                                    onChange={e => setBlurIntensity(parseInt(e.target.value))}
+                                    style={{ width: 60, cursor: 'pointer', accentColor: '#5ac8fa' }}
+                                    title="Intensidad del desenfoque"
+                                />
+                            </div>
+                        </div>
+
+                        <div style={{ width: 1, height: 20, background: 'var(--color-border)', margin: '0 4px' }} />
+
                         <ToolBtn
                             active={activeTool === 'crop'}
                             onClick={() => setActiveTool(activeTool === 'crop' ? 'select' : 'crop')}

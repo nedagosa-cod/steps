@@ -109,6 +109,13 @@ export const TRIGGER_COLORS = {
         bgActive: 'rgba(6,182,212,0.28)',
         label: '#06b6d4',
     },
+    input_date: {
+        border: 'rgba(156,39,176,0.65)',
+        bg: 'rgba(156,39,176,0.10)',
+        borderActive: 'rgba(156,39,176,0.9)',
+        bgActive: 'rgba(156,39,176,0.28)',
+        label: '#9c27b0',
+    },
 }
 
-export const TRIGGER_LABELS = { click: 'Click', double_click: 'Doble Clic', input: 'Input', keypress: 'Tecla', dropdown: 'Lista', dependent_dropdown: 'Lista Dep.', scroll_area: 'Área Scroll', radio: 'Radio', checkbox: 'Checkbox' }
+export const TRIGGER_LABELS = { click: 'Click', double_click: 'Doble Clic', input: 'Input', keypress: 'Tecla', dropdown: 'Lista', dependent_dropdown: 'Lista Dep.', scroll_area: 'Área Scroll', radio: 'Radio', checkbox: 'Checkbox', input_date: 'Calendario' }

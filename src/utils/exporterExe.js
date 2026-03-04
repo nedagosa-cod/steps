@@ -2,12 +2,12 @@
  * Client-side function to request an EXE build from the Vite dev server.
  * The actual packaging happens server-side via the exportExePlugin.
  */
-export async function exportAsExe(nodes, edges) {
+export async function exportAsExe(nodes, edges, globalConfig = {}) {
     try {
         const response = await fetch('/api/export-exe', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nodes, edges }),
+            body: JSON.stringify({ nodes, edges, globalConfig }),
         });
 
         const result = await response.json();

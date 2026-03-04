@@ -19,15 +19,18 @@ import ImageEditor from './components/ImageEditor'
 import ScrollImageBuilder from './components/ScrollImageBuilder'
 import AuthNode from './components/AuthNode'
 import ButtonEdge from './components/ButtonEdge'
+import ScrollImageLibrary from './components/ScrollImageLibrary'
+import GlobalConfigPanel from './components/GlobalConfigPanel'
+import ResultNode from './components/ResultNode'
 
-import { GitBranch, Plus, Play, Settings2, Trash2, Layers, Download, Maximize2, Save, Upload, Image as ImageIcon, UserCircle, Zap, Undo2, Redo2 } from 'lucide-react'
+import { GitBranch, Plus, Play, Settings2, Trash2, Layers, Download, Maximize2, Save, Upload, Image as ImageIcon, UserCircle, Zap, Undo2, Redo2, GalleryHorizontalEnd, LayoutDashboard, Award } from 'lucide-react'
 import { exportSimulator } from './utils/exporter'
 import { exportAsExe } from './utils/exporterExe'
 import { TRIGGER_COLORS } from './utils/triggers'
 import useHistory from './hooks/useHistory'
 
 // Must be stable — defined outside component
-const nodeTypes = { screenNode: ScreenNode, authNode: AuthNode }
+const nodeTypes = { screenNode: ScreenNode, authNode: AuthNode, resultNode: ResultNode }
 const edgeTypes = { buttonEdge: ButtonEdge }
 
 const edgeDefaults = {
@@ -59,7 +62,15 @@ export default function App() {
   const [isFocusMode, setIsFocusMode] = useState(false)
   const [isEditingImage, setIsEditingImage] = useState(null) // null or index
   const [showImageBuilder, setShowImageBuilder] = useState(false)
-  const [configTab, setConfigTab] = useState('node') // 'node' | 'media' | 'triggers'
+  const [configTab, setConfigTab] = useState('node') // 'node' | 'media' | 'triggers' | 'general'
+  const [globalConfig, setGlobalConfig] = useState({
+    timerMin: '',
+    timerMax: '',
+    bgType: 'color', // 'color' | 'image' | 'transparent'
+    bgValue: '#0a0d12'
+  })
+  const [showScrollLibrary, setShowScrollLibrary] = useState(false)
+  const [scrollLibraryCallback, setScrollLibraryCallback] = useState(null) // function(dataUrl)
 
   const deleteEdge = useCallback((id) => {
     setEdges((eds) => eds.filter((e) => e.id !== id))
@@ -85,21 +96,22 @@ export default function App() {
   const handleExport = useCallback(async () => {
     if (nodes.length === 0) return
     setIsExporting(true)
-    await exportSimulator(nodes, edges)
+    await exportSimulator(nodes, edges, globalConfig)
     setIsExporting(false)
-  }, [nodes, edges])
+  }, [nodes, edges, globalConfig])
 
   const handleExportExe = useCallback(async () => {
     if (nodes.length === 0) return
     setIsExportingExe(true)
-    await exportAsExe(nodes, edges)
+    await exportAsExe(nodes, edges, globalConfig)
     setIsExportingExe(false)
-  }, [nodes, edges])
+  }, [nodes, edges, globalConfig])
 
   const handleSaveProject = useCallback(() => {
     const projectData = {
       nodes,
-      edges
+      edges,
+      globalConfig
     }
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(projectData, null, 2))
     const downloadAnchorNode = document.createElement('a')
@@ -124,6 +136,9 @@ export default function App() {
           if (projectData.nodes && projectData.edges) {
             setNodes(projectData.nodes)
             setEdges(projectData.edges)
+            if (projectData.globalConfig) {
+              setGlobalConfig(projectData.globalConfig)
+            }
             updateNodeCounter(projectData.nodes)
             setSelectedNode(null)
             setIsFocusMode(false)
@@ -188,6 +203,24 @@ export default function App() {
     setNodes((nds) => [...nds, n])
     setSelectedNode(n)
   }, [nodes, setNodes])
+
+  const addResultNode = useCallback(() => {
+    const id = `node-${nodeCounter++}`
+
+    const n = {
+      id,
+      type: 'resultNode',
+      position: { x: 120 + Math.random() * 280, y: 80 + Math.random() * 180 },
+      data: {
+        label: `Resultado ${nodeCounter - 1}`,
+        title: '¡Simulación Completada!',
+        message: 'Has finalizado el recorrido con éxito.',
+        timerEnd: true // By default stops timer
+      },
+    }
+    setNodes((nds) => [...nds, n])
+    setSelectedNode(n)
+  }, [setNodes])
 
   const deleteSelectedNode = useCallback(() => {
     if (!selectedNode) return
@@ -257,7 +290,7 @@ export default function App() {
   return (
     <div style={S.root}>
       {isPreview && (
-        <PreviewMode nodes={nodes} edges={edges} onExit={() => setIsPreview(false)} />
+        <PreviewMode nodes={nodes} edges={edges} globalConfig={globalConfig} onExit={() => setIsPreview(false)} />
       )}
 
       {showImageBuilder && (
@@ -285,6 +318,22 @@ export default function App() {
         />
       )}
 
+      {/* Scroll Image Library */}
+      {showScrollLibrary && (
+        <ScrollImageLibrary
+          onSelect={(dataUrl) => {
+            if (scrollLibraryCallback) {
+              scrollLibraryCallback(dataUrl)
+              setScrollLibraryCallback(null)
+            }
+          }}
+          onClose={() => {
+            setShowScrollLibrary(false)
+            setScrollLibraryCallback(null)
+          }}
+        />
+      )}
+
       {/* ── LEFT TOOLBAR ─────────────────────────────────────── */}
       <aside style={S.leftBar}>
         {/* Logo */}
@@ -303,12 +352,31 @@ export default function App() {
           <UserCircle size={16} />
         </ToolBtn>
 
-        {/* Add node */}
+        {/* Add screen node */}
         <ToolBtn
           title="Añadir pantalla (N)"
           onClick={addScreenNode}
         >
           <Plus size={16} />
+        </ToolBtn>
+
+        {/* Add Result node */}
+        <ToolBtn
+          title="Añadir Certificado (Resultado)"
+          onClick={addResultNode}
+        >
+          <Award size={16} />
+        </ToolBtn>
+
+        {/* Scroll image library */}
+        <ToolBtn
+          title="Biblioteca de Scroll"
+          onClick={() => {
+            setScrollLibraryCallback(null)
+            setShowScrollLibrary(true)
+          }}
+        >
+          <GalleryHorizontalEnd size={16} />
         </ToolBtn>
 
         {/* Spacer */}
@@ -466,20 +534,33 @@ export default function App() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={S.rightPanelHeader}>
             <span style={S.rightPanelTitle}>
-              {configTab === 'node' ? 'Nodo' : configTab === 'media' ? 'Media' : 'Triggers'}
+              {configTab === 'node' ? 'Nodo' : configTab === 'media' ? 'Media' : configTab === 'triggers' ? 'Triggers' : 'General'}
             </span>
-            {selectedNode && (
+            {selectedNode && configTab !== 'general' && (
               <span style={S.nodeIdBadge}>{selectedNode.id}</span>
             )}
           </div>
           <div style={{ flex: 1, overflow: 'hidden' }}>
-            <NodeConfigPanel
-              node={selectedNode}
-              onUpdateNode={onUpdateNode}
-              nodes={nodes}
-              onEditImage={(idx) => setIsEditingImage(idx)}
-              activeTab={configTab}
-            />
+            {configTab === 'general' ? (
+              <GlobalConfigPanel
+                config={globalConfig}
+                onUpdate={(patch) => setGlobalConfig(prev => ({ ...prev, ...patch }))}
+                nodes={nodes}
+                edges={edges}
+              />
+            ) : (
+              <NodeConfigPanel
+                node={selectedNode}
+                onUpdateNode={onUpdateNode}
+                nodes={nodes}
+                onEditImage={(idx) => setIsEditingImage(idx)}
+                activeTab={configTab}
+                onOpenScrollLibrary={(callback) => {
+                  setScrollLibraryCallback(() => callback)
+                  setShowScrollLibrary(true)
+                }}
+              />
+            )}
           </div>
         </div>
 
@@ -492,6 +573,7 @@ export default function App() {
           paddingTop: 6, gap: 2,
         }}>
           {[
+            { id: 'general', icon: LayoutDashboard, label: 'General' },
             { id: 'node', icon: Settings2, label: 'Nodo' },
             { id: 'media', icon: ImageIcon, label: 'Media' },
             { id: 'triggers', icon: Zap, label: 'Triggers' },

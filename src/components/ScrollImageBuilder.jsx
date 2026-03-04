@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { X, Upload, Trash2, Save, GripVertical, Image as ImageIcon, Check } from 'lucide-react'
 import ImageEditor from './ImageEditor'
+import { addToScrollLibrary, getScrollLibrary } from './ScrollImageLibrary'
 
 export default function ScrollImageBuilder({ onClose }) {
     const [layers, setLayers] = useState([]) // { id, base64 }
@@ -107,9 +108,11 @@ export default function ScrollImageBuilder({ onClose }) {
                 currentY += scaledHeight
             })
 
-            // 4. Save to localStorage as high quality JPEG to prevent massive file sizes and quota errors
+            // 4. Save to library with a user-defined name
             const finalDataUrl = canvas.toDataURL('image/jpeg', 0.95)
-            localStorage.setItem('simubuild_scroll_image', finalDataUrl)
+            const libCount = getScrollLibrary().length
+            const name = prompt('Nombre para esta imagen:', `Scroll ${libCount + 1}`) || `Scroll ${libCount + 1}`
+            addToScrollLibrary(name.trim(), finalDataUrl)
 
             setSaveSuccess(true)
             setTimeout(() => setSaveSuccess(false), 3000)

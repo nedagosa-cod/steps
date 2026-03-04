@@ -10,13 +10,14 @@ import appJs from '../export/app.js?raw'
  * Generates and downloads a ZIP file containing the standalone simulation player
  * and the serialized nodes/edges payload.
  */
-export async function exportSimulator(originalNodes, originalEdges) {
+export async function exportSimulator(originalNodes, originalEdges, globalConfig = {}) {
     try {
         const zip = new JSZip()
 
         // Deep clone to avoid modifying the active React state
         const nodes = JSON.parse(JSON.stringify(originalNodes))
         const edges = JSON.parse(JSON.stringify(originalEdges))
+        const config = JSON.parse(JSON.stringify(globalConfig))
 
         const assetsFolder = zip.folder('assets')
         let assetCounter = 1
@@ -74,7 +75,7 @@ export async function exportSimulator(originalNodes, originalEdges) {
         zip.file('app.js', appJs)
 
         // 3. Generate the optimized data payload
-        const simDataJs = `window.SIM_DATA = ${JSON.stringify({ nodes, edges }, null, 2)};`
+        const simDataJs = `window.SIM_DATA = ${JSON.stringify({ nodes, edges, globalConfig: config }, null, 2)};`
         const alldataFolder = zip.folder('alldata')
         alldataFolder.file('data.js', simDataJs)
 
