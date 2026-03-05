@@ -1,59 +1,8 @@
 import React from 'react'
 import { Settings, Clock, Image as ImageIcon, PaintBucket, Maximize, RefreshCw } from 'lucide-react'
-
-const FieldLabel = ({ children }) => (
-    <label style={{
-        display: 'block', fontSize: 10, fontWeight: 600,
-        letterSpacing: '0.07em', textTransform: 'uppercase',
-        color: 'var(--color-text-tertiary)', marginBottom: 5,
-    }}>
-        {children}
-    </label>
-)
-
-const Divider = ({ label }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '16px 0' }}>
-        <div style={{ flex: 1, height: 1, background: 'var(--color-border-subtle)' }} />
-        {label && (
-            <span style={{
-                fontSize: 10, fontWeight: 600, letterSpacing: '0.1em',
-                textTransform: 'uppercase', color: 'var(--color-text-muted)', flexShrink: 0,
-            }}>
-                {label}
-            </span>
-        )}
-        <div style={{ flex: 1, height: 1, background: 'var(--color-border-subtle)' }} />
-    </div>
-)
-
-const NumericInput = ({ value, onChange, label, placeholder }) => (
-    <div>
-        <FieldLabel>{label}</FieldLabel>
-        <div style={{ position: 'relative' }}>
-            <input
-                type="number" min="0" step="1"
-                value={value !== null && value !== undefined ? value : ''}
-                onChange={onChange}
-                placeholder={placeholder}
-                style={{
-                    width: '100%',
-                    background: 'var(--color-control)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 6, padding: '6px 25px 6px 8px',
-                    fontSize: 12, fontVariantNumeric: 'tabular-nums',
-                    color: 'var(--color-text-primary)', outline: 'none',
-                    transition: 'border-color 150ms ease-out',
-                }}
-                onFocus={e => e.target.style.borderColor = 'var(--color-brand)'}
-                onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
-            />
-            <span style={{
-                position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-                fontSize: 10, color: 'var(--color-text-muted)', pointerEvents: 'none',
-            }}>s</span>
-        </div>
-    </div>
-)
+import { FieldLabel } from '../shared/components/FieldLabel'
+import { Divider } from '../shared/components/Divider'
+import { NumericInput } from '../shared/components/NumericInput'
 
 export default function GlobalConfigPanel({ config, onUpdate, nodes, edges }) {
 
@@ -93,17 +42,19 @@ export default function GlobalConfigPanel({ config, onUpdate, nodes, edges }) {
                         placeholder="Ej: 5"
                         value={config.timerMin}
                         onChange={e => onUpdate({ timerMin: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                        min={0} step="1" suffix="s"
                     />
                     <NumericInput
                         label="Máximo (seg)"
                         placeholder="Ej: 30"
                         value={config.timerMax}
                         onChange={e => onUpdate({ timerMax: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                        min={0} step="1" suffix="s"
                     />
                 </div>
             </div>
 
-            <Divider />
+            <Divider margin="16px 0" />
 
             {/* Fondo */}
             <div>
@@ -222,7 +173,7 @@ export default function GlobalConfigPanel({ config, onUpdate, nodes, edges }) {
                 </div>
             </div>
 
-            <Divider />
+            <Divider margin="16px 0" />
 
             {/* Efectos de Transición */}
             <div>

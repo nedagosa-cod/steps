@@ -1,83 +1,11 @@
 import React, { useRef, useState } from 'react'
 import { Upload, MousePointer, Keyboard, Info, Image, Video, Trash2, GripVertical, ChevronDown, ChevronUp, TextCursorInput, List, ListTree, Plus, ImageIcon, CircleDot, CheckSquare, CalendarDays, Undo2, Settings2 } from 'lucide-react'
-import { normalizeTriggers, makeDefaultTrigger, TRIGGER_COLORS, TRIGGER_LABELS } from '../utils/triggers'
+import { normalizeTriggers, makeDefaultTrigger, TRIGGER_COLORS, TRIGGER_LABELS } from '../shared/utils/triggers'
+import { FieldLabel } from '../shared/components/FieldLabel'
+import { Divider } from '../shared/components/Divider'
+import { TextInput } from '../shared/components/TextInput'
+import { NumericInput } from '../shared/components/NumericInput'
 
-/* ── Atoms ── */
-const FieldLabel = ({ children }) => (
-    <label style={{
-        display: 'block', fontSize: 10, fontWeight: 600,
-        letterSpacing: '0.07em', textTransform: 'uppercase',
-        color: 'var(--color-text-tertiary)', marginBottom: 5,
-    }}>
-        {children}
-    </label>
-)
-
-const Divider = ({ label }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0' }}>
-        <div style={{ flex: 1, height: 1, background: 'var(--color-border-subtle)' }} />
-        {label && (
-            <span style={{
-                fontSize: 9, fontWeight: 600, letterSpacing: '0.1em',
-                textTransform: 'uppercase', color: 'var(--color-text-muted)', flexShrink: 0,
-            }}>
-                {label}
-            </span>
-        )}
-        <div style={{ flex: 1, height: 1, background: 'var(--color-border-subtle)' }} />
-    </div>
-)
-
-const TextInput = ({ value, onChange, placeholder, mono }) => (
-    <input
-        type="text"
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        style={{
-            width: '100%',
-            background: 'var(--color-control)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 6, padding: '6px 10px',
-            fontSize: mono ? 11 : 12,
-            fontFamily: mono ? 'ui-monospace, monospace' : 'inherit',
-            color: 'var(--color-text-primary)', outline: 'none',
-            transition: 'border-color 150ms ease-out',
-        }}
-        onFocus={e => e.target.style.borderColor = 'var(--color-border-strong)'}
-        onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
-    />
-)
-
-const NumericInput = ({ value, onChange, label, accentColor, min = 0, max = 100, step = "0.01", suffix = "%" }) => (
-    <div>
-        <FieldLabel>{label}</FieldLabel>
-        <div style={{ position: 'relative' }}>
-            <input
-                type="number" min={min} max={max} step={step}
-                value={value}
-                onChange={onChange}
-                style={{
-                    width: '100%',
-                    background: 'var(--color-control)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 6, padding: '5px 25px 5px 8px',
-                    fontSize: 12, fontVariantNumeric: 'tabular-nums',
-                    color: 'var(--color-text-primary)', outline: 'none',
-                    transition: 'border-color 150ms ease-out',
-                }}
-                onFocus={e => e.target.style.borderColor = accentColor || 'var(--color-border-strong)'}
-                onBlur={e => e.target.style.borderColor = 'var(--color-border)'}
-            />
-            {suffix && (
-                <span style={{
-                    position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)',
-                    fontSize: 9, color: 'var(--color-text-muted)', pointerEvents: 'none',
-                }}>{suffix}</span>
-            )}
-        </div>
-    </div>
-)
 
 /* ── TriggerCard ── */
 function TriggerCard({

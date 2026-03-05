@@ -11,23 +11,24 @@ import ReactFlow, {
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 
-import ScreenNode from './components/ScreenNode'
+import ScreenNode from './features/nodes/ScreenNode'
 import NodeConfigPanel from './components/NodeConfigPanel'
 import PreviewMode from './components/PreviewMode'
 import FocusMode from './components/FocusMode'
 import ImageEditor from './components/ImageEditor'
 import ScrollImageBuilder from './components/ScrollImageBuilder'
-import AuthNode from './components/AuthNode'
-import ButtonEdge from './components/ButtonEdge'
+import AuthNode from './features/nodes/AuthNode'
+import ButtonEdge from './features/nodes/ButtonEdge'
 import ScrollImageLibrary from './components/ScrollImageLibrary'
 import GlobalConfigPanel from './components/GlobalConfigPanel'
-import ResultNode from './components/ResultNode'
+import ResultNode from './features/nodes/ResultNode'
 
 import { GitBranch, Plus, Play, Settings2, Trash2, Layers, Download, Maximize2, Save, Upload, Image as ImageIcon, UserCircle, Zap, Undo2, Redo2, GalleryHorizontalEnd, LayoutDashboard, Award } from 'lucide-react'
 import { exportSimulator } from './utils/exporter'
 import { exportAsExe } from './utils/exporterExe'
-import { TRIGGER_COLORS } from './utils/triggers'
-import useHistory from './hooks/useHistory'
+import { TRIGGER_COLORS } from './shared/utils/triggers'
+import useHistory from './shared/hooks/useHistory'
+import { ToolBtn, GhostBtn, PrimaryBtn } from './shared/components/Buttons'
 
 // Must be stable — defined outside component
 const nodeTypes = { screenNode: ScreenNode, authNode: AuthNode, resultNode: ResultNode }
@@ -810,81 +811,4 @@ const styles = {
     border: '1px solid var(--color-border)',
     color: 'var(--color-text-muted)',
   },
-}
-
-// ── Sub-components ────────────────────────────────────────────────
-
-function ToolBtn({ onClick, title, children, danger = false }) {
-  const [hovered, setHovered] = useState(false)
-  return (
-    <button
-      onClick={onClick}
-      title={title}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        width: 34, height: 34,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        borderRadius: 7, border: 'none', cursor: 'pointer',
-        color: danger
-          ? (hovered ? 'var(--color-danger)' : 'var(--color-text-muted)')
-          : (hovered ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)'),
-        background: hovered
-          ? (danger ? 'rgba(192,64,64,0.1)' : 'var(--color-raised)')
-          : 'transparent',
-        transition: 'all 150ms ease-out',
-      }}
-    >
-      {children}
-    </button>
-  )
-}
-
-function GhostBtn({ onClick, children, disabled }) {
-  const [hovered, setHovered] = useState(false)
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      onMouseEnter={() => !disabled && setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display: 'flex', alignItems: 'center',
-        padding: '5px 11px', borderRadius: 6,
-        border: `1px solid ${hovered ? 'var(--color-border-strong)' : 'var(--color-border)'}`,
-        background: hovered ? 'var(--color-raised)' : 'transparent',
-        color: disabled ? 'var(--color-text-muted)' : 'var(--color-text-secondary)',
-        fontSize: 11, fontWeight: 500, cursor: disabled ? 'default' : 'pointer',
-        transition: 'all 150ms ease-out',
-      }}
-    >
-      {children}
-    </button>
-  )
-}
-
-function PrimaryBtn({ onClick, children, disabled }) {
-  const [hovered, setHovered] = useState(false)
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      onMouseEnter={() => !disabled && setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display: 'flex', alignItems: 'center',
-        padding: '5px 14px', borderRadius: 6, border: 'none',
-        background: disabled
-          ? 'var(--color-raised)'
-          : (hovered ? 'var(--color-brand-hover)' : 'var(--color-brand)'),
-        boxShadow: (!disabled && hovered) ? '0 0 16px var(--color-brand-glow)' : 'none',
-        color: disabled ? 'var(--color-text-muted)' : '#fff',
-        fontSize: 11, fontWeight: 600, cursor: disabled ? 'default' : 'pointer',
-        transition: 'all 150ms ease-out',
-        letterSpacing: '0.01em',
-      }}
-    >
-      {children}
-    </button>
-  )
 }

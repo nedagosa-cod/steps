@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { ArrowLeft, ImageOff } from 'lucide-react'
-import { normalizeTriggers, TRIGGER_COLORS, TRIGGER_LABELS } from '../utils/triggers'
+import { normalizeTriggers, TRIGGER_COLORS, TRIGGER_LABELS } from '../shared/utils/triggers'
 
 function InteractiveTrigger({ trigger, index, onUpdate, containerRef }) {
     const hs = trigger.hotspot || { x: 40, y: 40, w: 20, h: 10 }

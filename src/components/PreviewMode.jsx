@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { X, CheckCircle, AlertCircle, GripHorizontal, ChevronDown, Maximize2, Minimize2, Eye } from 'lucide-react'
-import { normalizeTriggers, TRIGGER_COLORS } from '../utils/triggers'
+import { normalizeTriggers, TRIGGER_COLORS } from '../shared/utils/triggers'
 
 function DraggableHUD({ children }) {
     const [pos, setPos] = useState({ x: 24, y: 24 })

@@ -1,7 +1,7 @@
 import React, { memo, useEffect } from 'react'
 import { Handle, Position, useUpdateNodeInternals } from 'reactflow'
 import { ImageOff, MonitorPlay } from 'lucide-react'
-import { normalizeTriggers, TRIGGER_COLORS, TRIGGER_LABELS } from '../utils/triggers'
+import { normalizeTriggers, TRIGGER_COLORS, TRIGGER_LABELS } from '../../shared/utils/triggers'
 
 const ScreenNode = memo(({ id, data, selected }) => {
     const { label, image, mediaType } = data
