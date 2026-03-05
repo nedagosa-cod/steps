@@ -2,9 +2,9 @@ import JSZip from 'jszip'
 import { saveAs } from 'file-saver'
 
 // Import the 3 export template files as raw strings
-import indexHtml from '../export/index.html?raw'
-import stylesCss from '../export/styles.css?raw'
-import appJs from '../export/app.js?raw'
+import indexHtml from '../../export/index.html?raw'
+import stylesCss from '../../export/styles.css?raw'
+import appJs from '../../export/app.js?raw'
 
 /**
  * Generates and downloads a ZIP file containing the standalone simulation player

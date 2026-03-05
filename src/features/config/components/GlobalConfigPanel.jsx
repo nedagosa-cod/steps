@@ -1,8 +1,8 @@
 import React from 'react'
 import { Settings, Clock, Image as ImageIcon, PaintBucket, Maximize, RefreshCw } from 'lucide-react'
-import { FieldLabel } from '../shared/components/FieldLabel'
-import { Divider } from '../shared/components/Divider'
-import { NumericInput } from '../shared/components/NumericInput'
+import { FieldLabel } from '../../../shared/components/FieldLabel'
+import { Divider } from '../../../shared/components/Divider'
+import { NumericInput } from '../../../shared/components/NumericInput'
 
 export default function GlobalConfigPanel({ config, onUpdate, nodes, edges }) {
 
