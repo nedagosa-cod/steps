@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Upload, MousePointer, Keyboard, Info, Image, Video, Trash2, GripVertical, ChevronDown, ChevronUp, TextCursorInput, List, ListTree, Plus, ImageIcon, CircleDot, CheckSquare, CalendarDays, Undo2, Settings2 } from 'lucide-react'
+import { Upload, MousePointer, Keyboard, Info, Image, Video, Trash2, GripVertical, ChevronDown, ChevronUp, TextCursorInput, List, ListTree, Plus, ImageIcon, CircleDot, CheckSquare, CalendarDays, Undo2, Settings2, AppWindow, GripHorizontal, Eye, EyeOff, Settings, Maximize2, Table } from 'lucide-react'
 import { TRIGGER_COLORS, TRIGGER_LABELS } from '../../../shared/utils/triggers'
 import { FieldLabel } from '../../../shared/components/FieldLabel'
 import { Divider } from '../../../shared/components/Divider'
@@ -69,7 +69,9 @@ export function TriggerCard({
                         { value: 'dropdown', icon: List, label: 'Lista' },
                         { value: 'dependent_dropdown', icon: ListTree, label: 'Lista Doble' },
                         { value: 'scroll_area', icon: GripVertical, label: 'Área Scroll' },
-                        { value: 'radio', icon: CircleDot, label: 'Radio' },
+                        { value: 'floating_window', icon: AppWindow, label: 'Ventana Flot.' },
+                        { value: 'table_grid', icon: Table, label: 'Grid/Tabla' },
+                        { value: 'radio', icon: ({ size, color }) => <CircleDot size={size} color={color} />, label: 'Radio' },
                         { value: 'checkbox', icon: CheckSquare, label: 'Checkbox' },
                         { value: 'input_date', icon: CalendarDays, label: 'Calendario' },
                     ].map(({ value, icon: Icon, label }) => {
@@ -274,9 +276,9 @@ export function TriggerCard({
                         </div>
                     )}
 
-                    {trigger.type === 'scroll_area' && (
+                    {(trigger.type === 'scroll_area' || trigger.type === 'floating_window') && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
-                            <FieldLabel>Imagen de Contenido (Scrollable)</FieldLabel>
+                            <FieldLabel>{trigger.type === 'scroll_area' ? 'Imagen de Contenido (Scrollable)' : 'Imagen de Contenido (Ventana)'}</FieldLabel>
                             {trigger.contentImage ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                     <div style={{
@@ -298,7 +300,7 @@ export function TriggerCard({
                                         </button>
                                     </div>
                                     <span style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>
-                                        Esta imagen se mostrará dentro del área y permitirá hacer scroll verticalmente durante la simulación.
+                                        {trigger.type === 'scroll_area' ? 'Esta imagen se mostrará dentro del área y permitirá hacer scroll verticalmente durante la simulación.' : 'Esta imagen se mostrará dentro de la ventana flotante.'}
                                     </span>
                                 </div>
                             ) : (
@@ -360,11 +362,26 @@ export function TriggerCard({
                                 </div>
                             )}
 
-                            {/* Child Triggers inside Scroll Area */}
+                            {trigger.type === 'floating_window' && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={trigger.isDraggable !== false} // default true
+                                        onChange={e => onUpdate({ isDraggable: e.target.checked })}
+                                        id={`drag-${trigger.id}`}
+                                        style={{ accentColor: colors.label, cursor: 'pointer' }}
+                                    />
+                                    <label htmlFor={`drag-${trigger.id}`} style={{ fontSize: 11, color: 'var(--color-text-secondary)', cursor: 'pointer' }}>
+                                        Permitir al usuario arrastrar la ventana
+                                    </label>
+                                </div>
+                            )}
+
+                            {/* Child Triggers inside Area */}
                             {!isChild && (
                                 <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--color-border)' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                                        <FieldLabel>Triggers dentro del Scroll</FieldLabel>
+                                        <FieldLabel>{trigger.type === 'scroll_area' ? 'Triggers dentro del Scroll' : 'Triggers dentro de la Ventana'}</FieldLabel>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                         {(trigger.triggers || []).map((childTrigger, cIdx) => (
@@ -715,6 +732,170 @@ export function TriggerCard({
                                 </div>
                             </div>
                         )
+                    })()}
+
+                    {trigger.type === 'table_grid' && (() => {
+                        const rawDataX = trigger.tableRawData || '';
+                        const rowsX = rawDataX.split('\n');
+                        const maxColsX = Math.max(...rowsX.map(r => r.split('\t').length), 1);
+
+                        return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
+
+                                {/* Visual Builder */}
+                                <div style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 6, padding: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Constructor Visual</div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, overflowX: 'auto', paddingBottom: 4 }}>
+                                        {rowsX.map((rText, rIdx) => {
+                                            const cols = rText.split('\t');
+                                            while (cols.length < maxColsX) cols.push('');
+                                            return (
+                                                <div key={rIdx} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                                    {cols.map((val, cIdx) => (
+                                                        <input
+                                                            key={cIdx}
+                                                            value={val}
+                                                            placeholder="Vacio"
+                                                            onChange={(e) => {
+                                                                const matrix = rowsX.map(r => {
+                                                                    let c = r.split('\t');
+                                                                    while (c.length < maxColsX) c.push('');
+                                                                    return c;
+                                                                });
+                                                                matrix[rIdx][cIdx] = e.target.value;
+                                                                onUpdate({ tableRawData: matrix.map(r => r.join('\t')).join('\n') });
+                                                            }}
+                                                            style={{
+                                                                flex: '1 0 60px', width: 60, padding: '4px 6px', fontSize: 11,
+                                                                borderRadius: 4, border: '1px solid var(--color-border)',
+                                                                background: 'var(--color-control)', color: 'var(--color-text-primary)'
+                                                            }}
+                                                        />
+                                                    ))}
+                                                    <button
+                                                        onClick={() => {
+                                                            const m = rowsX.filter((_, i) => i !== rIdx);
+                                                            onUpdate({ tableRawData: m.join('\n') });
+                                                        }}
+                                                        style={{ background: 'transparent', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', padding: '0 4px', display: 'flex' }}
+                                                        title="Eliminar fila"
+                                                    >
+                                                        <Trash2 size={12} />
+                                                    </button>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                                        <button onClick={() => {
+                                            const newRow = Array(maxColsX).fill('').join('\t');
+                                            onUpdate({ tableRawData: (trigger.tableRawData ? trigger.tableRawData + '\n' : '') + newRow });
+                                        }} style={{ flex: 1, padding: '4px 0', fontSize: 10, fontWeight: 500, background: 'var(--color-control)', border: '1px dashed var(--color-border)', borderRadius: 4, cursor: 'pointer', color: 'var(--color-text-secondary)' }}>+ Fila</button>
+
+                                        <button onClick={() => {
+                                            const matrix = rowsX.map(r => {
+                                                const cols = r.split('\t');
+                                                cols.push('');
+                                                return cols;
+                                            });
+                                            onUpdate({ tableRawData: matrix.map(r => r.join('\t')).join('\n') });
+                                        }} style={{ flex: 1, padding: '4px 0', fontSize: 10, fontWeight: 500, background: 'var(--color-control)', border: '1px dashed var(--color-border)', borderRadius: 4, cursor: 'pointer', color: 'var(--color-text-secondary)' }}>+ Columna</button>
+
+                                        {maxColsX > 1 && (
+                                            <button onClick={() => {
+                                                const matrix = rowsX.map(r => {
+                                                    const arr = r.split('\t');
+                                                    arr.pop();
+                                                    return arr;
+                                                });
+                                                onUpdate({ tableRawData: matrix.map(r => r.join('\t')).join('\n') });
+                                            }} style={{ flex: 1, padding: '4px 0', fontSize: 10, fontWeight: 500, background: 'var(--color-control)', border: '1px dashed var(--color-border)', borderRadius: 4, cursor: 'pointer', color: 'var(--color-danger)' }}>- Columna</button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <details>
+                                    <summary style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', cursor: 'pointer', outline: 'none' }}>
+                                        Pegar matriz desde Excel (Avanzado)
+                                    </summary>
+                                    <div style={{ marginTop: 8 }}>
+                                        <textarea
+                                            value={trigger.tableRawData || ''}
+                                            onChange={(e) => onUpdate({ tableRawData: e.target.value })}
+                                            placeholder="Columna 1&#9;Columna 2&#10;Dato 1&#9;Dato 2"
+                                            style={{
+                                                width: '100%', height: 80, background: 'var(--color-control)',
+                                                border: '1px solid var(--color-border)', borderRadius: 6,
+                                                padding: '8px 10px', fontSize: 11, color: 'var(--color-text-primary)',
+                                                resize: 'vertical', outline: 'none', whiteSpace: 'pre'
+                                            }}
+                                        />
+                                        <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)', marginTop: 4 }}>
+                                            Copia un rango de celdas y pégalo. Sobrescribirá el diseño actual.
+                                        </div>
+                                    </div>
+                                </details>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                                    <div>
+                                        <FieldLabel>Ancho de Celda (%)</FieldLabel>
+                                        <NumericInput
+                                            value={trigger.cellWidth !== undefined ? trigger.cellWidth : 33}
+                                            onChange={val => onUpdate({ cellWidth: val })}
+                                            min={5} max={200} step={0.1}
+                                        />
+                                    </div>
+                                    <div>
+                                        <FieldLabel>Alto de Celda (%)</FieldLabel>
+                                        <NumericInput
+                                            value={trigger.cellHeight !== undefined ? trigger.cellHeight : 25}
+                                            onChange={val => onUpdate({ cellHeight: val })}
+                                            min={5} max={200} step={0.1}
+                                        />
+                                    </div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                                    <div>
+                                        <FieldLabel>Fondo Cabecera</FieldLabel>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <input type="color" value={trigger.headerBg || '#1E293B'} onChange={e => onUpdate({ headerBg: e.target.value })} style={{ width: 24, height: 24, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer', background: 'transparent' }} />
+                                            <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontFamily: 'monospace' }}>{trigger.headerBg || '#1E293B'}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <FieldLabel>Color Texto</FieldLabel>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <input type="color" value={trigger.textColor || '#E2E8F0'} onChange={e => onUpdate({ textColor: e.target.value })} style={{ width: 24, height: 24, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer', background: 'transparent' }} />
+                                            <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontFamily: 'monospace' }}>{trigger.textColor || '#E2E8F0'}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <FieldLabel>Fondo Filas Alternas</FieldLabel>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <input type="color" value={trigger.stripeBg || '#0F172A'} onChange={e => onUpdate({ stripeBg: e.target.value })} style={{ width: 24, height: 24, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer', background: 'transparent' }} />
+                                            <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontFamily: 'monospace' }}>{trigger.stripeBg || '#0F172A'}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <FieldLabel>Color Borde</FieldLabel>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <input type="color" value={trigger.borderColor || '#334155'} onChange={e => onUpdate({ borderColor: e.target.value })} style={{ width: 24, height: 24, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer', background: 'transparent' }} />
+                                            <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontFamily: 'monospace' }}>{trigger.borderColor || '#334155'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: 16 }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', marginTop: 4 }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={trigger.hasHeader !== false}
+                                            onChange={(e) => onUpdate({ hasHeader: e.target.checked })}
+                                            style={{ accentColor: 'var(--color-brand)' }}
+                                        />
+                                        <span style={{ fontSize: 11, color: 'var(--color-text-primary)' }}>Primera fila es cabecera</span>
+                                    </label>
+                                </div>
+                            </div>
+                        );
                     })()}
 
                     {/* Advanced Settings Toggle */}

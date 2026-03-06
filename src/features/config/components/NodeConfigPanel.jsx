@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react'
-import { Info, Image, Video, Trash2, GripVertical, ChevronDown, ChevronUp, TextCursorInput, List, ListTree, MousePointer, Keyboard, CircleDot, CheckSquare, CalendarDays, Undo2, Settings2, Upload, Plus } from 'lucide-react'
+import { Info, Image, Video, Trash2, GripVertical, ChevronDown, ChevronUp, TextCursorInput, List, ListTree, MousePointer, Keyboard, CircleDot, CheckSquare, CalendarDays, Undo2, Settings2, Upload, Plus, AppWindow, Table } from 'lucide-react'
 import { TRIGGER_COLORS, TRIGGER_LABELS } from '../../../shared/utils/triggers'
 import { FieldLabel } from '../../../shared/components/FieldLabel'
 import { Divider } from '../../../shared/components/Divider'
@@ -596,6 +596,8 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage
                                 <AddBtn onClick={() => addTrigger('dropdown')} icon={List} label="+ Lista" color={TRIGGER_COLORS.dropdown.label} />
                                 <AddBtn onClick={() => addTrigger('dependent_dropdown')} icon={ListTree} label="+ Lista Doble" color={TRIGGER_COLORS.dependent_dropdown.label} />
                                 <AddBtn onClick={() => addTrigger('scroll_area')} icon={GripVertical} label="+ Área Scroll" color={TRIGGER_COLORS.scroll_area.label} />
+                                <AddBtn onClick={() => addTrigger('floating_window')} icon={AppWindow} label="+ Ventana Flot." color={TRIGGER_COLORS.floating_window.label} />
+                                <AddBtn onClick={() => addTrigger('table_grid')} icon={Table} label="+ Grid/Tabla" color={TRIGGER_COLORS.table_grid.label} />
                                 <AddBtn onClick={() => addTrigger('radio')} icon={CircleDot} label="+ Radio" color={TRIGGER_COLORS.radio.label} />
                                 <AddBtn onClick={() => addTrigger('checkbox')} icon={CheckSquare} label="+ Checkbox" color={TRIGGER_COLORS.checkbox.label} />
                                 <AddBtn onClick={() => addTrigger('input_date')} icon={CalendarDays} label="+ Calendario" color={TRIGGER_COLORS.input_date.label} />

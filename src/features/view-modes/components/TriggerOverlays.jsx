@@ -1,6 +1,100 @@
-import React from 'react'
-import { ChevronDown } from 'lucide-react'
+import React, { useState, useRef } from 'react'
+import { ChevronDown, GripHorizontal } from 'lucide-react'
 import { TRIGGER_COLORS } from '../../../shared/utils/triggers'
+
+function DraggableWindowItem({ trigger, isDone, isBlocked, colors, completedTriggers, handlers, state, refs }) {
+    const hs = trigger.hotspot || { x: 30, y: 40, w: 20, h: 10 }
+
+    // We use pixel offsets from the initial % position for smoother dragging without need to calculate container aspect ratio.
+    const [offset, setOffset] = useState({ x: 0, y: 0 })
+    const isDragging = useRef(false)
+    const dragStart = useRef({ x: 0, y: 0 })
+    const initialOffset = useRef({ x: 0, y: 0 })
+
+    const onPointerDown = (e) => {
+        if (trigger.isDraggable === false) return; // if disabled dragging
+        isDragging.current = true
+        dragStart.current = { x: e.clientX, y: e.clientY }
+        initialOffset.current = { ...offset }
+        e.stopPropagation()
+
+        const onPointerMove = (ev) => {
+            if (!isDragging.current) return
+            const dx = ev.clientX - dragStart.current.x
+            const dy = ev.clientY - dragStart.current.y
+            setOffset({
+                x: initialOffset.current.x + dx,
+                y: initialOffset.current.y + dy
+            })
+        }
+
+        const onPointerUp = () => {
+            isDragging.current = false
+            window.removeEventListener('pointermove', onPointerMove)
+            window.removeEventListener('pointerup', onPointerUp)
+        }
+
+        window.addEventListener('pointermove', onPointerMove)
+        window.addEventListener('pointerup', onPointerUp)
+    }
+
+    return (
+        <div
+            id={`trigger-${trigger.id}`}
+            style={{
+                position: 'absolute',
+                left: `${hs.x}%`, top: `${hs.y}%`,
+                width: `${hs.w}%`, height: `${hs.h}%`,
+                transform: `translate(${offset.x}px, ${offset.y}px)`,
+                border: trigger.hidden ? 'none' : `1px solid ${colors.border}`,
+                backgroundColor: trigger.hidden ? 'transparent' : 'rgba(10,13,18,0.95)',
+                borderRadius: 8,
+                boxShadow: trigger.hidden ? 'none' : '0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05) inset',
+                overflow: 'hidden',
+                opacity: isBlocked ? 0.35 : 1,
+                pointerEvents: isBlocked ? 'none' : 'auto',
+                zIndex: 50, // Floating windows should be above other elements
+            }}
+        >
+            {/* Content Area */}
+            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+                {trigger.contentImage ? (
+                    <img src={trigger.contentImage} alt="Ventana flotante" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} draggable={false} />
+                ) : (
+                    !trigger.hidden && (
+                        <div style={{ padding: 10, textAlign: 'center', color: colors.label, fontSize: 11, minHeight: '100%' }}>
+                            [Ventana Flotante sin imagen]
+                        </div>
+                    )
+                )}
+                {/* Child Triggers */}
+                {trigger.triggers && trigger.triggers.length > 0 && (
+                    <TriggerOverlays
+                        triggers={trigger.triggers}
+                        completedTriggers={completedTriggers}
+                        handlers={handlers}
+                        state={state}
+                        refs={refs}
+                    />
+                )}
+            </div>
+
+            {/* Drag Handle Header */}
+            <div
+                onPointerDown={onPointerDown}
+                style={{
+                    position: 'absolute', top: 0, left: 0, right: 0,
+                    height: 24, background: 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: trigger.isDraggable === false ? 'default' : 'grab',
+                    zIndex: 10
+                }}
+            >
+                {(trigger.isDraggable !== false && !trigger.hidden) && <GripHorizontal size={14} color="rgba(255,255,255,0.6)" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.8))' }} />}
+            </div>
+        </div>
+    )
+}
 
 export function TriggerOverlays({ triggers, completedTriggers, handlers, state, refs }) {
     const { handleClickTrigger, handleInputSubmit, handleInputChange, setInputValues, setError } = handlers
@@ -16,6 +110,73 @@ export function TriggerOverlays({ triggers, completedTriggers, handlers, state, 
             : (trigger.dependsOn ? [trigger.dependsOn] : [])
 
         const isBlocked = depsArray.length > 0 && depsArray.some(depId => !completedTriggers.has(depId))
+
+        if (trigger.type === 'table_grid') {
+            return (
+                <div
+                    key={trigger.id}
+                    onPointerDown={e => {
+                        const isPrimary = e.button === 0 || e.type === 'touchstart'
+                        if (isPrimary && !isBlocked) {
+                            handlers.handleTriggerClick(trigger.id)
+                        }
+                    }}
+                    style={{
+                        position: 'absolute',
+                        left: `${trigger.hotspot.x}%`,
+                        top: `${trigger.hotspot.y}%`,
+                        width: `${trigger.hotspot.w}%`,
+                        height: `${trigger.hotspot.h}%`,
+                        opacity: isBlocked ? 0.35 : 1,
+                        pointerEvents: isBlocked ? 'none' : 'auto',
+                        cursor: 'pointer',
+                        display: 'grid',
+                        gridTemplateColumns: `repeat(${Math.max(...(trigger.tableRawData || '').split('\n').filter(r => r.trim()).map(r => r.split('\t').length), 1)}, ${trigger.cellWidth !== undefined ? trigger.cellWidth : 33}%)`,
+                        gridAutoRows: `${trigger.cellHeight !== undefined ? trigger.cellHeight : 25}%`,
+                        fontSize: 'clamp(8px, 4cqw, 24px)', // Proportional to container width
+                        color: trigger.textColor || '#E2E8F0',
+                        overflow: 'auto',
+                        background: trigger.borderColor || '#334155', // Bordes
+                        gap: `${trigger.borderWidth !== undefined ? trigger.borderWidth : 1}px`,
+                        border: `1px solid ${trigger.borderColor || '#334155'}`,
+                        zIndex: 10,
+                        boxSizing: 'border-box',
+                        containerType: 'inline-size', // Enable container queries
+                    }}
+                >
+                    {(trigger.tableRawData || '').split('\n').filter(r => r.trim() !== '').map((rowText, rowIndex, rows) => {
+                        const maxCols = Math.max(...rows.map(r => r.split('\t').length), 1);
+                        const cols = rowText.split('\t');
+                        return Array.from({ length: maxCols }).map((_, colIndex) => {
+                            const isHeader = trigger.hasHeader !== false && rowIndex === 0;
+                            const cellContent = cols[colIndex] || '';
+                            let bg = trigger.stripeBg || '#0F172A';
+
+                            if (isHeader) bg = trigger.headerBg || '#1E293B';
+                            else if (trigger.stripeBg && rowIndex % 2 === 0) bg = 'transparent'; // Intercalar si no es header
+
+                            return (
+                                <div
+                                    key={`${rowIndex}-${colIndex}`}
+                                    style={{
+                                        background: bg,
+                                        display: 'flex', alignItems: 'center', padding: '0 8px',
+                                        fontWeight: isHeader ? 600 : 400,
+                                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                        transition: 'filter 150ms'
+                                    }}
+                                    onMouseEnter={e => { if (!isHeader) e.currentTarget.style.filter = 'brightness(1.2)' }}
+                                    onMouseLeave={e => { if (!isHeader) e.currentTarget.style.filter = 'none' }}
+                                    title={cellContent}
+                                >
+                                    {cellContent}
+                                </div>
+                            );
+                        });
+                    })}
+                </div>
+            )
+        }
 
         if (trigger.type === 'click' || trigger.type === 'double_click') {
             const isClick = trigger.type === 'click'
@@ -457,6 +618,22 @@ export function TriggerOverlays({ triggers, completedTriggers, handlers, state, 
                         </div>
                     )}
                 </div>
+            )
+        }
+
+        if (trigger.type === 'floating_window') {
+            return (
+                <DraggableWindowItem
+                    key={trigger.id}
+                    trigger={trigger}
+                    isDone={isDone}
+                    isBlocked={isBlocked}
+                    colors={colors}
+                    completedTriggers={completedTriggers}
+                    handlers={handlers}
+                    state={state}
+                    refs={refs}
+                />
             )
         }
 

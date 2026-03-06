@@ -27,7 +27,7 @@ export const NumericInput = ({
             <input
                 type="number" min={min} max={max} step={step}
                 value={value !== null && value !== undefined ? value : ''}
-                onChange={onChange}
+                onChange={e => onChange(parseFloat(e.target.value) || 0)}
                 placeholder={placeholder}
                 style={{
                     width: '100%',

@@ -103,7 +103,8 @@ export default function FocusMode({ node, onExit, onUpdateNode }) {
                             </div>
                         )}
                         {triggers.map((t, i) => {
-                            const innerRef = t.type === 'scroll_area' ? getInnerRef(t.id) : null;
+                            const isContainer = t.type === 'scroll_area' || t.type === 'floating_window';
+                            const innerRef = isContainer ? getInnerRef(t.id) : null;
                             return (
                                 <InteractiveTrigger
                                     key={t.id}
@@ -113,7 +114,7 @@ export default function FocusMode({ node, onExit, onUpdateNode }) {
                                     containerRef={containerRef}
                                     innerRef={innerRef}
                                 >
-                                    {t.type === 'scroll_area' && t.triggers && t.triggers.length > 0 && t.triggers.map((child, childIdx) => (
+                                    {isContainer && t.triggers && t.triggers.length > 0 && t.triggers.map((child, childIdx) => (
                                         <InteractiveTrigger
                                             key={child.id}
                                             trigger={child}

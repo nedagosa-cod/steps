@@ -72,6 +72,7 @@
     let currentNodeId = startNode?.id;
     let completedTriggers = new Set();
     let inputValues = {};
+    let dragOffsets = {};
     let isTransitioning = false;
     let timeRemaining = null;
     let timerRef = null;
@@ -181,6 +182,7 @@
         elError.style.display = "none";
         elSuccess.style.display = "none";
         completedTriggers = new Set();
+        dragOffsets = {};
         const preservedAuthName = inputValues["auth_name"] || "";
         inputValues = { "auth_name": preservedAuthName };
 
@@ -638,6 +640,143 @@
             }
 
             el.appendChild(contentWrap);
+        }
+
+        // ── Floating Window ──────────────────────────────────
+        else if (t.type === "floating_window") {
+            el.style.border = t.hidden ? "none" : "1px solid " + colors.borderActive;
+            el.style.backgroundColor = t.hidden ? "transparent" : "rgba(10,13,18,0.95)";
+            el.style.borderRadius = "8px";
+            el.style.boxShadow = t.hidden ? "none" : "0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05) inset";
+            el.style.overflow = "hidden";
+            el.style.zIndex = "50";
+
+            // Restore previous offset if we have one
+            const off = dragOffsets[t.id] || { x: 0, y: 0 };
+            el.style.transform = `translate(${off.x}px, ${off.y}px)`;
+
+            // Content Area
+            const contentWrap = document.createElement("div");
+            contentWrap.style.cssText = "position:absolute;inset:0;overflow:hidden";
+
+            if (t.contentImage) {
+                const img = document.createElement("img");
+                img.src = t.contentImage; img.alt = "Ventana flotante";
+                img.draggable = false;
+                img.style.cssText = "width:100%;height:100%;object-fit:cover;display:block";
+                contentWrap.appendChild(img);
+            } else if (!t.hidden) {
+                const placeholder = document.createElement("div");
+                placeholder.textContent = "[Ventana Flotante sin imagen]";
+                placeholder.style.cssText = "padding:10px;text-align:center;color:" + colors.label + ";font-size:11px;min-height:100%";
+                contentWrap.appendChild(placeholder);
+            }
+
+            if (t.triggers && t.triggers.length > 0) {
+                t.triggers.forEach(child => {
+                    const childEl = buildTriggerElement(child, triggers);
+                    contentWrap.appendChild(childEl);
+                });
+            }
+
+            el.appendChild(contentWrap);
+
+            // Header/Drag Handle
+            const header = document.createElement("div");
+            header.style.cssText = "position:absolute;top:0;left:0;right:0;height:24px;background:transparent;display:flex;align-items:center;justify-content:center;z-index:10";
+            header.style.cursor = t.isDraggable === false ? "default" : "grab";
+
+            if (t.isDraggable !== false) {
+                if (!t.hidden) {
+                    const grip = document.createElement("span");
+                    grip.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" style="filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8))" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>';
+                    header.appendChild(grip);
+                }
+
+                let dragging = false, startX, startY;
+
+                header.addEventListener("pointerdown", (e) => {
+                    e.stopPropagation();
+                    dragging = true;
+                    if (!dragOffsets[t.id]) dragOffsets[t.id] = { x: 0, y: 0 };
+                    header.style.cursor = "grabbing";
+                    header.setPointerCapture(e.pointerId);
+                    startX = e.clientX;
+                    startY = e.clientY;
+                });
+
+                window.addEventListener("pointermove", (e) => {
+                    if (!dragging) return;
+                    const dx = e.clientX - startX;
+                    const dy = e.clientY - startY;
+                    dragOffsets[t.id].x += dx;
+                    dragOffsets[t.id].y += dy;
+                    el.style.transform = `translate(${dragOffsets[t.id].x}px, ${dragOffsets[t.id].y}px)`;
+
+                    startX = e.clientX;
+                    startY = e.clientY;
+                });
+
+                window.addEventListener("pointerup", () => {
+                    if (dragging) {
+                        dragging = false;
+                        header.style.cursor = "grab";
+                    }
+                });
+            }
+            el.appendChild(header);
+        }
+
+        // ── Table Grid ──────────────────────────────────
+        else if (t.type === "table_grid") {
+            const rawData = t.tableRawData || '';
+            const rows = rawData.split('\\n').filter(r => r.trim() !== '');
+            const maxCols = Math.max(...rows.map(r => r.split('\\t').length), 1);
+
+            el.style.display = "grid";
+            el.style.gridTemplateColumns = `repeat(${maxCols}, ${t.cellWidth !== undefined ? t.cellWidth : 33}%)`;
+            el.style.gridAutoRows = `${t.cellHeight !== undefined ? t.cellHeight : 25}%`;
+            el.style.fontSize = "clamp(8px, 4cqw, 24px)";
+            el.style.containerType = "inline-size";
+            el.style.color = t.textColor || '#E2E8F0';
+            el.style.overflow = "auto";
+            el.style.background = t.borderColor || '#334155';
+            el.style.gap = `${t.borderWidth !== undefined ? t.borderWidth : 1}px`;
+            el.style.border = `1px solid ${t.borderColor || '#334155'}`;
+            el.style.boxSizing = "border-box";
+            el.style.cursor = "pointer";
+            el.style.zIndex = "10";
+
+            rows.forEach((rowText, rowIndex) => {
+                const cols = rowText.split('\\t');
+                for (let colIndex = 0; colIndex < maxCols; colIndex++) {
+                    const isHeader = t.hasHeader !== false && rowIndex === 0;
+                    const cellContent = cols[colIndex] || '';
+                    let bg = t.stripeBg || '#0F172A';
+
+                    if (isHeader) bg = t.headerBg || '#1E293B';
+                    else if (t.stripeBg && rowIndex % 2 === 0) bg = 'transparent';
+
+                    const cell = document.createElement("div");
+                    cell.style.cssText = `background:${bg};display:flex;align-items:center;padding:0 8px;font-weight:${isHeader ? 600 : 400};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`;
+                    cell.textContent = cellContent;
+                    cell.title = cellContent;
+
+                    if (!isHeader) {
+                        cell.addEventListener("mouseenter", () => cell.style.filter = "brightness(1.2)");
+                        cell.addEventListener("mouseleave", () => cell.style.filter = "none");
+                    }
+
+                    el.appendChild(cell);
+                }
+            });
+
+            el.addEventListener("pointerdown", (e) => {
+                const isPrimary = e.button === 0 || e.type === 'touchstart';
+                if (isPrimary) {
+                    handleTriggerCompletion(t.id);
+                }
+            });
         }
 
         // ── Radio ─────────────────────────────────────────────

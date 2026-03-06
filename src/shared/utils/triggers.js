@@ -42,13 +42,30 @@ export function makeDefaultTrigger(type = 'click') {
         validationValue: '',
         hotspot: { x: 30, y: 40, w: 20, h: 10 },
     }
-    
-    // Si es scroll_area, inicializar con lista vacía de triggers hijos
+
+    // Si es scroll_area o floating_window, inicializar con lista vacía de triggers hijos
     if (type === 'scroll_area') {
-        defaultData.triggers = []
+        defaultData.triggers = [];
     }
-    
-    return defaultData
+
+    if (type === 'floating_window') {
+        defaultData.triggers = [];
+        defaultData.isDraggable = true;
+    }
+
+    if (type === 'table_grid') {
+        defaultData.tableRawData = "Encabezado 1\\tEncabezado 2\\nFila 1 Col 1\\tFila 1 Col 2\\nFila 2 Col 1\\tFila 2 Col 2";
+        defaultData.cellWidth = 33;
+        defaultData.cellHeight = 25;
+        defaultData.hasHeader = true;
+        defaultData.headerBg = "#1E293B";
+        defaultData.stripeBg = "#0F172A";
+        defaultData.borderColor = "#334155";
+        defaultData.borderWidth = 1;
+        defaultData.textColor = "#E2E8F0";
+    }
+
+    return defaultData;
 }
 
 /**
@@ -60,9 +77,9 @@ export function getAllRequiredTriggers(triggersArray) {
 
     for (const t of triggersArray) {
         if (!t.isOptional) required.push(t)
-        
+
         // Búsqueda recursiva en triggers de áreas anidadas
-        if (t.type === 'scroll_area' && Array.isArray(t.triggers)) {
+        if ((t.type === 'scroll_area' || t.type === 'floating_window') && Array.isArray(t.triggers)) {
             required = required.concat(getAllRequiredTriggers(t.triggers))
         }
     }
@@ -120,6 +137,22 @@ export const TRIGGER_COLORS = {
         bgActive: 'rgba(16,185,129,0.28)',
         label: '#10b981',
     },
+    floating_window: {
+        bg: 'rgba(234, 187, 0, 0.1)', // Amarillo
+        bgHover: 'rgba(234, 187, 0, 0.2)',
+        bgActive: 'rgba(234, 187, 0, 0.3)',
+        border: 'rgba(234, 187, 0, 0.4)',
+        borderActive: 'rgba(234, 187, 0, 0.8)',
+        label: '#F59E0B'
+    },
+    table_grid: {
+        bg: 'rgba(124, 58, 237, 0.1)', // Violeta
+        bgHover: 'rgba(124, 58, 237, 0.2)',
+        bgActive: 'rgba(124, 58, 237, 0.3)',
+        border: 'rgba(124, 58, 237, 0.4)',
+        borderActive: 'rgba(124, 58, 237, 0.8)',
+        label: '#8B5CF6'
+    },
     radio: {
         border: 'rgba(251,146,60,0.65)',
         bg: 'rgba(251,146,60,0.10)',
@@ -143,4 +176,19 @@ export const TRIGGER_COLORS = {
     },
 }
 
-export const TRIGGER_LABELS = { click: 'Click', double_click: 'Doble Clic', input: 'Input', keypress: 'Tecla', dropdown: 'Lista', dependent_dropdown: 'Lista Dep.', scroll_area: 'Área Scroll', radio: 'Radio', checkbox: 'Checkbox', input_date: 'Calendario' }
+export const TRIGGER_TYPES = ['click', 'double_click', 'input', 'input_date', 'dropdown', 'dependent_dropdown', 'keypress', 'scroll_area', 'floating_window', 'table_grid', 'radio', 'checkbox']
+
+export const TRIGGER_LABELS = {
+    click: 'Clic Simple',
+    double_click: 'Doble Clic',
+    input: 'Campo Texto',
+    input_date: 'Campo Fecha',
+    dropdown: 'Menú Desplegable',
+    dependent_dropdown: 'Desplegable Anidado',
+    keypress: 'Tecla Específica',
+    scroll_area: 'Área Scroll',
+    floating_window: 'Ventana Flotante',
+    table_grid: 'Tabla/Grilla',
+    radio: 'Opción Única',
+    checkbox: 'Opciones Múltiples'
+}
