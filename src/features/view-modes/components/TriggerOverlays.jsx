@@ -426,13 +426,35 @@ export function TriggerOverlays({ triggers, completedTriggers, handlers, state, 
                     }}
                 >
                     {trigger.contentImage ? (
-                        <img src={trigger.contentImage} alt="Contenido scroll" style={{ width: '100%', height: 'auto', display: 'block' }} draggable={false} />
+                        <div style={{ position: 'relative', width: '100%', height: 'auto' }}>
+                            <img src={trigger.contentImage} alt="Contenido scroll" style={{ width: '100%', height: 'auto', display: 'block' }} draggable={false} />
+                            {trigger.triggers && trigger.triggers.length > 0 && (
+                                <TriggerOverlays
+                                    triggers={trigger.triggers}
+                                    completedTriggers={completedTriggers}
+                                    handlers={handlers}
+                                    state={state}
+                                    refs={refs}
+                                />
+                            )}
+                        </div>
                     ) : (
-                        !trigger.hidden && (
-                            <div style={{ padding: 10, textAlign: 'center', color: colors.label, fontSize: 11, background: 'rgba(10,13,18,0.8)', minHeight: '100%' }}>
-                                [Área de Scroll sin imagen]
-                            </div>
-                        )
+                        <div style={{ position: 'relative', minHeight: '100%' }}>
+                            {!trigger.hidden && (
+                                <div style={{ padding: 10, textAlign: 'center', color: colors.label, fontSize: 11, background: 'rgba(10,13,18,0.8)', minHeight: '100%' }}>
+                                    [Área de Scroll sin imagen]
+                                </div>
+                            )}
+                            {trigger.triggers && trigger.triggers.length > 0 && (
+                                <TriggerOverlays
+                                    triggers={trigger.triggers}
+                                    completedTriggers={completedTriggers}
+                                    handlers={handlers}
+                                    state={state}
+                                    refs={refs}
+                                />
+                            )}
+                        </div>
                     )}
                 </div>
             )

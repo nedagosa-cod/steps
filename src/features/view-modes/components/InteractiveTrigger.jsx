@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { TRIGGER_COLORS, TRIGGER_LABELS } from '../../../shared/utils/triggers'
 
-export function InteractiveTrigger({ trigger, index, onUpdate, containerRef }) {
+export function InteractiveTrigger({ trigger, index, onUpdate, containerRef, innerRef, children }) {
     const hs = trigger.hotspot || { x: 40, y: 40, w: 20, h: 10 }
     const colors = TRIGGER_COLORS[trigger.type] || TRIGGER_COLORS.click
 
@@ -18,7 +18,10 @@ export function InteractiveTrigger({ trigger, index, onUpdate, containerRef }) {
 
     const onPointerDown = (e, type) => {
         e.stopPropagation()
-        e.preventDefault() // prevent native image dragging if clicked
+        // Only prevent default if we are not clicking inside the scroll area content
+        if (trigger.type !== 'scroll_area') {
+            e.preventDefault()
+        }
         if (!containerRef.current) return
 
         actionRef.current = type
@@ -72,16 +75,44 @@ export function InteractiveTrigger({ trigger, index, onUpdate, containerRef }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 boxShadow: actionRef.current ? '0 8px 32px rgba(0,0,0,0.4)' : 'none',
                 zIndex: actionRef.current ? 10 : 1, // bring to front while interacting
+                overflowY: trigger.type === 'scroll_area' ? 'auto' : 'visible',
+                overflowX: trigger.type === 'scroll_area' ? 'hidden' : 'visible',
             }}
         >
-            {/* The label */}
-            <span style={{
-                fontSize: 10, fontWeight: 700, color: colors.label,
-                background: 'rgba(10,13,18,0.7)',
-                borderRadius: 3, padding: '2px 6px', lineHeight: 1.2,
-                boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                pointerEvents: 'none', // ignore mouse on text
-            }}>
+            {trigger.type === 'scroll_area' && (
+                <div
+                    ref={innerRef}
+                    style={{ position: 'relative', width: '100%', minHeight: '100%' }}
+                    onPointerDown={e => e.stopPropagation()} // Let children handle their own clicks/drags, don't drag the parent
+                >
+                    {trigger.contentImage ? (
+                        <img src={trigger.contentImage} alt="Contenido scroll" style={{ width: '100%', height: 'auto', display: 'block', pointerEvents: 'none' }} draggable={false} />
+                    ) : (
+                        <div style={{ padding: 10, textAlign: 'center', color: colors.label, fontSize: 11, background: 'rgba(10,13,18,0.8)', minHeight: '100%' }}>
+                            [Área de Scroll sin imagen]
+                        </div>
+                    )}
+                    {children}
+                </div>
+            )}
+
+            {trigger.type !== 'scroll_area' && children}
+
+            {/* The label (Drag Handle) */}
+            <span
+                onPointerDown={e => trigger.type === 'scroll_area' ? onPointerDown(e, 'drag') : null}
+                style={{
+                    position: trigger.type === 'scroll_area' ? 'absolute' : 'relative',
+                    top: trigger.type === 'scroll_area' ? 0 : 'auto',
+                    left: trigger.type === 'scroll_area' ? 0 : 'auto',
+                    fontSize: 10, fontWeight: 700, color: colors.label,
+                    background: 'rgba(10,13,18,0.9)',
+                    borderRadius: 3, padding: '4px 8px', lineHeight: 1.2,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                    pointerEvents: trigger.type === 'scroll_area' ? 'auto' : 'none',
+                    cursor: trigger.type === 'scroll_area' ? 'move' : 'inherit',
+                    zIndex: 20
+                }}>
                 {index + 1} · {TRIGGER_LABELS[trigger.type]}
             </span>
 

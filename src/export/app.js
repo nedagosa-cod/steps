@@ -100,6 +100,20 @@
         return [];
     }
 
+    function getAllRequiredTriggers(triggersArray) {
+        let required = [];
+        if (!Array.isArray(triggersArray)) return required;
+
+        for (const t of triggersArray) {
+            if (!t.isOptional) required.push(t);
+
+            if (t.type === 'scroll_area' && Array.isArray(t.triggers)) {
+                required = required.concat(getAllRequiredTriggers(t.triggers));
+            }
+        }
+        return required;
+    }
+
     function showError(msg) {
         elErrorText.textContent = msg || "Texto incorrecto. Intenta de nuevo.";
         elError.style.display = "flex";
@@ -214,7 +228,8 @@
         }
 
         // Normal: all non-optional done?
-        const allDone = triggers.every(tr => tr.isOptional || completedTriggers.has(tr.id));
+        const reqTriggers = getAllRequiredTriggers(triggers);
+        const allDone = reqTriggers.every(tr => completedTriggers.has(tr.id));
         if (allDone) {
             const nextId = getNextNodeId();
             if (nextId) {
@@ -231,7 +246,7 @@
         const node = getNode(currentNodeId);
         if (isPractice && node?.type !== "authNode") {
             elPracticeGuide.style.display = "flex";
-            const guideTriggers = triggers.filter(t => !t.isOptional);
+            const guideTriggers = getAllRequiredTriggers(triggers);
 
             if (guideTriggers.length === 0) {
                 elPracticeContent.innerHTML = "";
@@ -596,18 +611,33 @@
             el.style.border = t.hidden ? "none" : "1px dashed " + colors.borderActive;
             el.style.overflowY = "auto"; el.style.overflowX = "hidden";
             el.style.background = "transparent"; el.style.display = "block";
+
+            // Container for image and nested child triggers
+            const contentWrap = document.createElement("div");
+            contentWrap.style.cssText = "position:relative;width:100%;height:auto;min-height:100%";
+
             if (t.contentImage) {
                 const img = document.createElement("img");
                 img.src = t.contentImage; img.alt = "Contenido scroll";
                 img.draggable = false;
                 img.style.cssText = "width:100%;height:auto;display:block";
-                el.appendChild(img);
+                contentWrap.appendChild(img);
             } else if (!t.hidden) {
                 const placeholder = document.createElement("div");
                 placeholder.textContent = "[Área de Scroll sin imagen]";
                 placeholder.style.cssText = "padding:10px;text-align:center;color:" + colors.label + ";font-size:11px;background:rgba(10,13,18,0.8);min-height:100%";
-                el.appendChild(placeholder);
+                contentWrap.appendChild(placeholder);
             }
+
+            // Nested child triggers recursion
+            if (t.triggers && t.triggers.length > 0) {
+                t.triggers.forEach(child => {
+                    const childEl = buildTriggerElement(child, triggers);
+                    contentWrap.appendChild(childEl);
+                });
+            }
+
+            el.appendChild(contentWrap);
         }
 
         // ── Radio ─────────────────────────────────────────────

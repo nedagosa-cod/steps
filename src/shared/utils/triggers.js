@@ -36,12 +36,37 @@ export function normalizeTriggers(data) {
 }
 
 export function makeDefaultTrigger(type = 'click') {
-    return {
+    const defaultData = {
         id: newTriggerId(),
         type,
         validationValue: '',
         hotspot: { x: 30, y: 40, w: 20, h: 10 },
     }
+    
+    // Si es scroll_area, inicializar con lista vacía de triggers hijos
+    if (type === 'scroll_area') {
+        defaultData.triggers = []
+    }
+    
+    return defaultData
+}
+
+/**
+ * Retorna todos los triggers obligatorios, incluyendo los que están anidados (ej. dentro de un scroll_area)
+ */
+export function getAllRequiredTriggers(triggersArray) {
+    let required = []
+    if (!Array.isArray(triggersArray)) return required
+
+    for (const t of triggersArray) {
+        if (!t.isOptional) required.push(t)
+        
+        // Búsqueda recursiva en triggers de áreas anidadas
+        if (t.type === 'scroll_area' && Array.isArray(t.triggers)) {
+            required = required.concat(getAllRequiredTriggers(t.triggers))
+        }
+    }
+    return required
 }
 
 // Color scheme per trigger type (for editor overlays)

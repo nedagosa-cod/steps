@@ -10,7 +10,8 @@ export function TriggerCard({
     trigger, index, allTriggers, nodes,
     onUpdate, onDelete,
     isExpanded, onToggleExpand,
-    draggableProps, onOpenScrollLibrary
+    draggableProps, onOpenScrollLibrary,
+    isChild = false
 }) {
     const [showAdvanced, setShowAdvanced] = useState(false)
     const hs = trigger.hotspot || { x: 30, y: 40, w: 20, h: 10 }
@@ -112,7 +113,7 @@ export function TriggerCard({
                 </button>
 
                 {/* Delete button */}
-                {allTriggers.length > 1 && (
+                {(allTriggers.length > 1 || isChild) && (
                     <button
                         onClick={onDelete}
                         style={{
@@ -356,6 +357,80 @@ export function TriggerCard({
                                     >
                                         <ImageIcon size={14} color="var(--color-brand)" /> Seleccionar de Biblioteca
                                     </button>
+                                </div>
+                            )}
+
+                            {/* Child Triggers inside Scroll Area */}
+                            {!isChild && (
+                                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--color-border)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                                        <FieldLabel>Triggers dentro del Scroll</FieldLabel>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                        {(trigger.triggers || []).map((childTrigger, cIdx) => (
+                                            <TriggerCard
+                                                key={childTrigger.id}
+                                                trigger={childTrigger}
+                                                index={cIdx}
+                                                allTriggers={trigger.triggers || []}
+                                                nodes={nodes}
+                                                onUpdate={(patch) => {
+                                                    const newTriggers = [...(trigger.triggers || [])]
+                                                    newTriggers[cIdx] = { ...newTriggers[cIdx], ...patch }
+                                                    onUpdate({ triggers: newTriggers })
+                                                }}
+                                                onDelete={() => {
+                                                    const newTriggers = (trigger.triggers || []).filter((_, i) => i !== cIdx)
+                                                    onUpdate({ triggers: newTriggers })
+                                                }}
+                                                isExpanded={childTrigger._expanded !== false}
+                                                onToggleExpand={() => {
+                                                    const newTriggers = [...(trigger.triggers || [])]
+                                                    newTriggers[cIdx] = { ...newTriggers[cIdx], _expanded: childTrigger._expanded === false }
+                                                    onUpdate({ triggers: newTriggers })
+                                                }}
+                                                draggableProps={{}}
+                                                onOpenScrollLibrary={onOpenScrollLibrary}
+                                                isChild={true}
+                                            />
+                                        ))}
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8, flexWrap: 'wrap' }}>
+                                        {[
+                                            { value: 'click', label: '+ Click' },
+                                            { value: 'input', label: '+ Input' },
+                                            { value: 'dropdown', label: '+ Lista' },
+                                            { value: 'radio', label: '+ Radio' },
+                                            { value: 'checkbox', label: '+ Checkbox' }
+                                        ].map(btn => (
+                                            <button
+                                                key={btn.value}
+                                                onClick={() => {
+                                                    import('../../../shared/utils/triggers').then(m => {
+                                                        const newT = m.makeDefaultTrigger(btn.value)
+                                                        newT._expanded = true
+                                                        onUpdate({ triggers: [...(trigger.triggers || []), newT] })
+                                                    })
+                                                }}
+                                                style={{
+                                                    padding: '4px 8px', borderRadius: 4, background: 'var(--color-surface)',
+                                                    border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)',
+                                                    fontSize: 10, cursor: 'pointer', transition: 'all 120ms'
+                                                }}
+                                                onMouseEnter={e => {
+                                                    e.currentTarget.style.background = 'var(--color-control)'
+                                                    e.currentTarget.style.color = 'var(--color-text-primary)'
+                                                }}
+                                                onMouseLeave={e => {
+                                                    e.currentTarget.style.background = 'var(--color-surface)'
+                                                    e.currentTarget.style.color = 'var(--color-text-secondary)'
+                                                }}
+                                            >
+                                                {btn.label}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </div>

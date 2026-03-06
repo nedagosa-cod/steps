@@ -1,6 +1,6 @@
 import React from 'react'
 import { X, CheckCircle, AlertCircle, Maximize2, Minimize2, Eye } from 'lucide-react'
-import { normalizeTriggers } from '../../../shared/utils/triggers'
+import { normalizeTriggers, getAllRequiredTriggers } from '../../../shared/utils/triggers'
 import { DraggableHUD } from './DraggableHUD'
 import { TriggerOverlays } from './TriggerOverlays'
 import usePreviewMode from '../hooks/usePreviewMode'
@@ -153,7 +153,7 @@ export default function PreviewMode({ nodes, edges, globalConfig = {}, onExit })
                         })}
                         {/* Pending count */}
                         {(() => {
-                            const reqTriggers = triggers.filter(t => !t.isOptional);
+                            const reqTriggers = getAllRequiredTriggers(triggers);
                             const reqCompleted = reqTriggers.filter(t => completedTriggers.has(t.id)).length;
                             if (reqCompleted < reqTriggers.length) {
                                 return (
@@ -178,7 +178,7 @@ export default function PreviewMode({ nodes, edges, globalConfig = {}, onExit })
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                             {(() => {
-                                const guideTriggers = triggers.filter(t => !t.isOptional);
+                                const guideTriggers = getAllRequiredTriggers(triggers);
                                 if (guideTriggers.length === 0) {
                                     return <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontStyle: 'italic' }}>No hay acciones obligatorias en esta pantalla.</div>;
                                 }

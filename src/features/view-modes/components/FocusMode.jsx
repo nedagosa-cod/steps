@@ -15,6 +15,20 @@ export default function FocusMode({ node, onExit, onUpdateNode }) {
         onUpdateNode(node.id, { triggers: newTriggers })
     }
 
+    const updateChildTrigger = (parentIdx, childIdx, patch) => {
+        const parent = triggers[parentIdx]
+        const newChildren = parent.triggers.map((c, i) => i === childIdx ? { ...c, ...patch } : c)
+        updateTrigger(parentIdx, { triggers: newChildren })
+    }
+
+    const childRefs = useRef({})
+    const getInnerRef = (id) => {
+        if (!childRefs.current[id]) {
+            childRefs.current[id] = { current: null }
+        }
+        return childRefs.current[id]
+    }
+
     return (
         <div style={{
             position: 'absolute', inset: 0,
@@ -88,15 +102,29 @@ export default function FocusMode({ node, onExit, onUpdateNode }) {
                                 ))}
                             </div>
                         )}
-                        {triggers.map((t, i) => (
-                            <InteractiveTrigger
-                                key={t.id}
-                                trigger={t}
-                                index={i}
-                                onUpdate={patch => updateTrigger(i, patch)}
-                                containerRef={containerRef}
-                            />
-                        ))}
+                        {triggers.map((t, i) => {
+                            const innerRef = t.type === 'scroll_area' ? getInnerRef(t.id) : null;
+                            return (
+                                <InteractiveTrigger
+                                    key={t.id}
+                                    trigger={t}
+                                    index={i}
+                                    onUpdate={patch => updateTrigger(i, patch)}
+                                    containerRef={containerRef}
+                                    innerRef={innerRef}
+                                >
+                                    {t.type === 'scroll_area' && t.triggers && t.triggers.length > 0 && t.triggers.map((child, childIdx) => (
+                                        <InteractiveTrigger
+                                            key={child.id}
+                                            trigger={child}
+                                            index={childIdx}
+                                            onUpdate={patch => updateChildTrigger(i, childIdx, patch)}
+                                            containerRef={innerRef}
+                                        />
+                                    ))}
+                                </InteractiveTrigger>
+                            )
+                        })}
                     </div>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, color: 'var(--color-text-muted)' }}>

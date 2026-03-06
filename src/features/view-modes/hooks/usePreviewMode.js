@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { normalizeTriggers } from '../../../shared/utils/triggers'
+import { normalizeTriggers, getAllRequiredTriggers } from '../../../shared/utils/triggers'
 
 export default function usePreviewMode(nodes, edges, globalConfig) {
     const startNode = nodes.find(n => n.data?.isStartNode === true)
@@ -102,7 +102,8 @@ export default function usePreviewMode(nodes, edges, globalConfig) {
                 return next
             }
 
-            const allDone = allTriggers.every(t => t.isOptional || next.has(t.id))
+            const reqTriggers = getAllRequiredTriggers(allTriggers)
+            const allDone = reqTriggers.every(t => next.has(t.id))
             if (allDone) {
                 const nextId = getNextNodeId()
                 if (nextId) setTimeout(() => navigate(nextId), delay)

@@ -59,13 +59,21 @@ export async function exportSimulator(originalNodes, originalEdges, globalConfig
                 }
             }
 
-            // B) Scroll Area Content Images
-            if (node.data.triggers && Array.isArray(node.data.triggers)) {
-                for (const trigger of node.data.triggers) {
+            // B) Process Triggers (including nested scroll_area images)
+            const processTriggersImages = (triggersArray) => {
+                if (!Array.isArray(triggersArray)) return
+                for (const trigger of triggersArray) {
                     if (trigger.type === 'scroll_area' && trigger.contentImage) {
                         trigger.contentImage = processBase64(trigger.contentImage)
                     }
+                    if (trigger.triggers && Array.isArray(trigger.triggers)) {
+                        processTriggersImages(trigger.triggers)
+                    }
                 }
+            }
+
+            if (node.data.triggers) {
+                processTriggersImages(node.data.triggers)
             }
         }
 
