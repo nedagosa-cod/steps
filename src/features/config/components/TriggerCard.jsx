@@ -839,7 +839,7 @@ export function TriggerCard({
                                     <div>
                                         <FieldLabel>Ancho de Celda (%)</FieldLabel>
                                         <NumericInput
-                                            value={trigger.cellWidth !== undefined ? trigger.cellWidth : 33}
+                                            value={trigger.cellWidth !== undefined ? trigger.cellWidth : 33.3}
                                             onChange={val => onUpdate({ cellWidth: val })}
                                             min={5} max={200} step={0.1}
                                         />
@@ -855,6 +855,43 @@ export function TriggerCard({
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                                     <div>
+                                        <FieldLabel>Grosor Borde (px)</FieldLabel>
+                                        <NumericInput
+                                            value={trigger.borderWidth !== undefined ? trigger.borderWidth : 1}
+                                            onChange={val => onUpdate({ borderWidth: val })}
+                                            min={0} max={10} step={1}
+                                        />
+                                    </div>
+                                    <div>
+                                        <FieldLabel>Alineación Texto</FieldLabel>
+                                        <select
+                                            value={trigger.textAlign || 'left'}
+                                            onChange={e => onUpdate({ textAlign: e.target.value })}
+                                            style={{
+                                                width: '100%', background: 'var(--color-control)',
+                                                border: '1px solid var(--color-border)', borderRadius: 6,
+                                                padding: '6px 8px', fontSize: 12, color: 'var(--color-text-primary)',
+                                                outline: 'none'
+                                            }}
+                                        >
+                                            <option value="left">Izquierda</option>
+                                            <option value="center">Centro</option>
+                                            <option value="right">Derecha</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                                    <div>
+                                        <FieldLabel>Tamaño Fuente (%)</FieldLabel>
+                                        <NumericInput
+                                            value={trigger.fontSize !== undefined ? trigger.fontSize : 4}
+                                            onChange={val => onUpdate({ fontSize: val })}
+                                            min={0.1} max={50} step={0.1}
+                                        />
+                                    </div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                                    <div>
                                         <FieldLabel>Fondo Cabecera</FieldLabel>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                             <input type="color" value={trigger.headerBg || '#1E293B'} onChange={e => onUpdate({ headerBg: e.target.value })} style={{ width: 24, height: 24, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer', background: 'transparent' }} />
@@ -862,21 +899,39 @@ export function TriggerCard({
                                         </div>
                                     </div>
                                     <div>
-                                        <FieldLabel>Color Texto</FieldLabel>
+                                        <FieldLabel>Texto Cabecera</FieldLabel>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <input type="color" value={trigger.headerTextColor || '#FFFFFF'} onChange={e => onUpdate({ headerTextColor: e.target.value })} style={{ width: 24, height: 24, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer', background: 'transparent' }} />
+                                            <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontFamily: 'monospace' }}>{trigger.headerTextColor || '#FFFFFF'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                                    <div>
+                                        <FieldLabel>Fondo Fila Impar</FieldLabel>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <input type="color" value={trigger.oddRowBg || trigger.stripeBg || '#0F172A'} onChange={e => onUpdate({ oddRowBg: e.target.value })} style={{ width: 24, height: 24, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer', background: 'transparent' }} />
+                                            <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontFamily: 'monospace' }}>{trigger.oddRowBg || trigger.stripeBg || '#0F172A'}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <FieldLabel>Fondo Fila Par</FieldLabel>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <input type="color" value={trigger.evenRowBg || '#111827'} onChange={e => onUpdate({ evenRowBg: e.target.value })} style={{ width: 24, height: 24, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer', background: 'transparent' }} />
+                                            <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontFamily: 'monospace' }}>{trigger.evenRowBg || '#111827'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                                    <div>
+                                        <FieldLabel>Color Texto General</FieldLabel>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                             <input type="color" value={trigger.textColor || '#E2E8F0'} onChange={e => onUpdate({ textColor: e.target.value })} style={{ width: 24, height: 24, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer', background: 'transparent' }} />
                                             <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontFamily: 'monospace' }}>{trigger.textColor || '#E2E8F0'}</span>
                                         </div>
                                     </div>
                                     <div>
-                                        <FieldLabel>Fondo Filas Alternas</FieldLabel>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <input type="color" value={trigger.stripeBg || '#0F172A'} onChange={e => onUpdate({ stripeBg: e.target.value })} style={{ width: 24, height: 24, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer', background: 'transparent' }} />
-                                            <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontFamily: 'monospace' }}>{trigger.stripeBg || '#0F172A'}</span>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <FieldLabel>Color Borde</FieldLabel>
+                                        <FieldLabel>Color de Borde</FieldLabel>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                             <input type="color" value={trigger.borderColor || '#334155'} onChange={e => onUpdate({ borderColor: e.target.value })} style={{ width: 24, height: 24, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer', background: 'transparent' }} />
                                             <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', fontFamily: 'monospace' }}>{trigger.borderColor || '#334155'}</span>

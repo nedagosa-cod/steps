@@ -133,7 +133,7 @@ export function TriggerOverlays({ triggers, completedTriggers, handlers, state, 
                         display: 'grid',
                         gridTemplateColumns: `repeat(${Math.max(...(trigger.tableRawData || '').split('\n').filter(r => r.trim()).map(r => r.split('\t').length), 1)}, ${trigger.cellWidth !== undefined ? trigger.cellWidth : 33}%)`,
                         gridAutoRows: `${trigger.cellHeight !== undefined ? trigger.cellHeight : 25}%`,
-                        fontSize: 'clamp(8px, 4cqw, 24px)', // Proportional to container width
+                        fontSize: `clamp(4px, ${trigger.fontSize !== undefined ? trigger.fontSize : 4}cqw, 80px)`, // Proportional to container width
                         color: trigger.textColor || '#E2E8F0',
                         overflow: 'auto',
                         background: trigger.borderColor || '#334155', // Bordes
@@ -150,10 +150,10 @@ export function TriggerOverlays({ triggers, completedTriggers, handlers, state, 
                         return Array.from({ length: maxCols }).map((_, colIndex) => {
                             const isHeader = trigger.hasHeader !== false && rowIndex === 0;
                             const cellContent = cols[colIndex] || '';
-                            let bg = trigger.stripeBg || '#0F172A';
+                            let bg = trigger.oddRowBg || trigger.stripeBg || '#0F172A';
+                            if (rowIndex % 2 !== 0) bg = trigger.evenRowBg || '#111827';
 
                             if (isHeader) bg = trigger.headerBg || '#1E293B';
-                            else if (trigger.stripeBg && rowIndex % 2 === 0) bg = 'transparent'; // Intercalar si no es header
 
                             return (
                                 <div
@@ -161,7 +161,10 @@ export function TriggerOverlays({ triggers, completedTriggers, handlers, state, 
                                     style={{
                                         background: bg,
                                         display: 'flex', alignItems: 'center', padding: '0 8px',
-                                        fontWeight: isHeader ? 600 : 400,
+                                        fontWeight: isHeader ? 700 : 400,
+                                        color: isHeader ? (trigger.headerTextColor || '#FFFFFF') : (trigger.textColor || '#E2E8F0'),
+                                        justifyContent: trigger.textAlign === 'center' ? 'center' : (trigger.textAlign === 'right' ? 'flex-end' : 'flex-start'),
+                                        textAlign: trigger.textAlign || 'left',
                                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                                         transition: 'filter 150ms'
                                     }}

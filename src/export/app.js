@@ -736,7 +736,7 @@
             el.style.display = "grid";
             el.style.gridTemplateColumns = `repeat(${maxCols}, ${t.cellWidth !== undefined ? t.cellWidth : 33}%)`;
             el.style.gridAutoRows = `${t.cellHeight !== undefined ? t.cellHeight : 25}%`;
-            el.style.fontSize = "clamp(8px, 4cqw, 24px)";
+            el.style.fontSize = `clamp(4px, ${t.fontSize !== undefined ? t.fontSize : 4}cqw, 80px)`;
             el.style.containerType = "inline-size";
             el.style.color = t.textColor || '#E2E8F0';
             el.style.overflow = "auto";
@@ -752,13 +752,15 @@
                 for (let colIndex = 0; colIndex < maxCols; colIndex++) {
                     const isHeader = t.hasHeader !== false && rowIndex === 0;
                     const cellContent = cols[colIndex] || '';
-                    let bg = t.stripeBg || '#0F172A';
-
+                    let bg = t.oddRowBg || t.stripeBg || '#0F172A';
+                    if (rowIndex % 2 !== 0) bg = t.evenRowBg || '#111827';
                     if (isHeader) bg = t.headerBg || '#1E293B';
-                    else if (t.stripeBg && rowIndex % 2 === 0) bg = 'transparent';
+
+                    const color = isHeader ? (t.headerTextColor || '#FFFFFF') : (t.textColor || '#E2E8F0');
+                    const justify = t.textAlign === 'center' ? 'center' : (t.textAlign === 'right' ? 'flex-end' : 'flex-start');
 
                     const cell = document.createElement("div");
-                    cell.style.cssText = `background:${bg};display:flex;align-items:center;padding:0 8px;font-weight:${isHeader ? 600 : 400};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`;
+                    cell.style.cssText = `background:${bg};color:${color};display:flex;align-items:center;justify-content:${justify};padding:0 8px;font-weight:${isHeader ? 700 : 400};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`;
                     cell.textContent = cellContent;
                     cell.title = cellContent;
 

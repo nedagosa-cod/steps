@@ -59,9 +59,13 @@ export function makeDefaultTrigger(type = 'click') {
         defaultData.cellHeight = 25;
         defaultData.hasHeader = true;
         defaultData.headerBg = "#1E293B";
-        defaultData.stripeBg = "#0F172A";
+        defaultData.headerTextColor = "#FFFFFF";
+        defaultData.oddRowBg = "#0F172A";
+        defaultData.evenRowBg = "#111827";
         defaultData.borderColor = "#334155";
         defaultData.borderWidth = 1;
+        defaultData.textAlign = "left";
+        defaultData.fontSize = 4;
         defaultData.textColor = "#E2E8F0";
     }
 
