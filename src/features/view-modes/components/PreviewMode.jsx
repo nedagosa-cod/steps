@@ -283,8 +283,8 @@ export default function PreviewMode({ nodes, edges, globalConfig = {}, onExit })
                 }
             </DraggableHUD>
 
-            {/* ── Visual Result Node (Certificado) ── */}
-            {currentNode.type === 'resultNode' && (
+            {/* ── Visual Result Node (Certificado) o Ranking ── */}
+            {(currentNode.type === 'resultNode' || currentNode.type === 'rankingNode') && (
                 <div style={{
                     position: 'fixed', inset: 0, zIndex: 9999,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -314,6 +314,92 @@ export default function PreviewMode({ nodes, edges, globalConfig = {}, onExit })
                                 }}
                                 onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
                                 onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                            >
+                                Finalizar y Volver
+                            </button>
+                        </div>
+                    ) : currentNode.type === 'rankingNode' ? (
+                        /* Ranking Card */
+                        <div style={{
+                            background: '#11131a', borderRadius: 20, padding: '30px 40px',
+                            width: '94%', maxWidth: 700, minHeight: 'min(90vh, 550px)',
+                            boxShadow: '0 25px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05) inset',
+                            display: 'flex', flexDirection: 'column',
+                            color: '#fff', position: 'relative', overflow: 'hidden'
+                        }}>
+                            {/* Ambient Glow */}
+                            <div style={{ position: 'absolute', top: '-20%', left: '-10%', width: '60%', height: '60%', background: 'radial-gradient(circle, rgba(124, 92, 252, 0.2) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
+                            <div style={{ position: 'absolute', bottom: '-20%', right: '-10%', width: '60%', height: '60%', background: 'radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(40px)' }} />
+
+                            <div style={{ textAlign: 'center', zIndex: 1, marginBottom: 24, paddingBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-brand)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>
+                                    {data.message || '¡Buen trabajo! Este es tu puntaje final.'}
+                                </div>
+                                <h1 style={{ margin: 0, fontSize: 'clamp(28px, 4vw, 36px)', fontWeight: 800, letterSpacing: '-0.02em', background: 'linear-gradient(to right, #fff, #a5b4fc)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                                    {data.title || 'Tabla de Posiciones'}
+                                </h1>
+                            </div>
+
+                            <div style={{ flex: 1, zIndex: 1, display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto', paddingRight: 8 }}>
+                                {/* Current User Score Highlight */}
+                                <div style={{ background: 'linear-gradient(90deg, rgba(124, 92, 252, 0.2) 0%, rgba(124, 92, 252, 0.05) 100%)', border: '1px solid rgba(124, 92, 252, 0.4)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                                        <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--color-brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 700 }}>
+                                            {(inputValues['auth_name'] || 'T').charAt(0).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>{inputValues['auth_name'] || 'Tú'}</div>
+                                            <div style={{ fontSize: 12, color: '#a5b4fc' }}>{previewModeData.state.scoreMetrics.timeDiffSeconds}s tiempo • {previewModeData.state.scoreMetrics.errorCount} errores</div>
+                                        </div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ fontSize: 28, fontWeight: 800, color: '#fff', fontVariantNumeric: 'tabular-nums' }}>
+                                            {(previewModeData.state.scoreMetrics.finalScore || 0).toLocaleString()}
+                                        </div>
+                                        <div style={{ fontSize: 11, color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Puntos</div>
+                                    </div>
+                                </div>
+                                
+                                {/* Dummy Leaderboard */}
+                                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 10, paddingLeft: 10 }}>Top 5 Histórico</div>
+                                {[ 
+                                    { name: 'Ana M.', score: 1450, time: '12s' },
+                                    { name: 'Carlos R.', score: 1220, time: '18s' },
+                                    { name: 'Sofía P.', score: 1180, time: '21s' },
+                                    { name: 'Javier T.', score: 950, time: '35s' },
+                                    { name: 'Laura Gómez', score: 840, time: '40s' }
+                                ].map((player, idx) => (
+                                    <div key={idx} style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        padding: '12px 16px', borderRadius: 10, background: 'rgba(255,255,255,0.02)',
+                                        border: '1px solid rgba(255,255,255,0.05)'
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                                            <div style={{ width: 28, fontSize: 14, fontWeight: 700, color: idx < 3 ? 'var(--color-brand)' : 'var(--color-text-muted)', textAlign: 'center' }}>
+                                                {idx + 1}
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>{player.name}</div>
+                                                <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Tiempo: {player.time}</div>
+                                            </div>
+                                        </div>
+                                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
+                                            {player.score.toLocaleString()} pts
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <button
+                                onClick={onExit}
+                                style={{
+                                    marginTop: 30, padding: '14px 32px', borderRadius: 10, background: 'var(--color-brand)',
+                                    color: 'white', fontWeight: 600, fontSize: 15, border: 'none',
+                                    cursor: 'pointer', boxShadow: '0 4px 14px rgba(124, 92, 252, 0.4)',
+                                    transition: 'transform 150ms, box-shadow 150ms', zIndex: 1, alignSelf: 'center'
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(124, 92, 252, 0.6)' }}
+                                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(124, 92, 252, 0.4)' }}
                             >
                                 Finalizar y Volver
                             </button>

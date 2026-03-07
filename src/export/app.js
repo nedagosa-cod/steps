@@ -77,6 +77,7 @@
     let timeRemaining = null;
     let timerRef = null;
     let hasTimerStarted = false;
+    let scoreMetrics = { startTime: null, endTime: null, errorCount: 0, finalScore: 0, timeDiffSeconds: 0 };
 
     // ── DOM refs ─────────────────────────────────────────────
     const elScreenName = document.getElementById("ui-screen-name");
@@ -118,6 +119,7 @@
     function showError(msg) {
         elErrorText.textContent = msg || "Texto incorrecto. Intenta de nuevo.";
         elError.style.display = "flex";
+        scoreMetrics.errorCount = scoreMetrics.errorCount + 1;
         setTimeout(() => { elError.style.display = "none"; }, 2200);
     }
 
@@ -141,6 +143,33 @@
         path.setAttribute("d", "m6 9 6 6 6-6");
         svg.appendChild(path);
         return svg;
+    }
+    
+    // ── Scoring Calculation ──────────────────────────────────
+    function calculateFinalScore() {
+        if (scoreMetrics.endTime) return;
+        scoreMetrics.endTime = Date.now();
+        
+        let startToUse = scoreMetrics.startTime;
+        if (!startToUse) {
+            // fallback si por error no se marcó el inicio
+            startToUse = Date.now() - 10000;
+        }
+        
+        const timeDiffSeconds = Math.floor((scoreMetrics.endTime - startToUse) / 1000);
+        scoreMetrics.timeDiffSeconds = timeDiffSeconds;
+        
+        let timeBonus = 0;
+        if (timeRemaining !== null && timeRemaining > 0) {
+            timeBonus = timeRemaining * 10;
+        } else {
+            timeBonus = Math.max(0, 500 - (timeDiffSeconds * 2));
+        }
+        
+        let finalScore = 1000 + timeBonus - (scoreMetrics.errorCount * 50);
+        if (finalScore < 0) finalScore = 0;
+        
+        scoreMetrics.finalScore = finalScore;
     }
 
     // ── Draggable HUD ────────────────────────────────────────
@@ -191,6 +220,20 @@
 
         setTimeout(() => {
             currentNodeId = targetId;
+            const node = getNode(currentNodeId);
+            
+            // Iniciar timer global si es el auth_node o nodo de inicio marcado
+            if (node && (node.type === 'authNode' || node.data?.isStartNode)) {
+                if (!scoreMetrics.startTime) {
+                    scoreMetrics.startTime = Date.now();
+                }
+            }
+            
+            // Al llegar al final, calcula el score
+            if (node && (node.type === 'resultNode' || node.type === 'rankingNode')) {
+                calculateFinalScore();
+            }
+            
             render();
             elImageWrapper.classList.remove("transitioning");
             elProgressRow.classList.remove("transitioning");
@@ -995,6 +1038,11 @@
             return;
         }
 
+        if (node.type === "rankingNode") {
+            renderRankingNode(data);
+            return;
+        }
+
         if (data.image) {
             if (data.mediaType === "video") {
                 const videoSrc = Array.isArray(data.image) ? data.image[0] : data.image;
@@ -1283,6 +1331,123 @@
                 }
             `;
             document.head.appendChild(style);
+        }
+
+        elImageWrapper.innerHTML = "";
+        elImageWrapper.appendChild(wrap);
+    }
+
+    // ── Ranking Node renderer (Tabla de Posiciones) ───────────────────
+    function renderRankingNode(data) {
+        const participantName = inputValues["auth_name"] ? inputValues["auth_name"].trim() : "Tú";
+        const initialName = participantName.charAt(0).toUpperCase();
+        
+        const wrap = document.createElement("div");
+        wrap.style.cssText = "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(10,13,18,0.85);backdrop-filter:blur(12px);animation:fadeIn 0.5s ease-out";
+
+        const isPractice = sessionStorage.getItem("isPracticeMode") === "true";
+        let htmlContent = "";
+
+        if (isPractice) {
+            htmlContent = `
+                <div style="background: #ffffff; border-radius: 12px; padding: 40px 60px; max-width: 500px; width: 90%; text-align: center; box-shadow: 0 25px 80px rgba(0,0,0,0.6); display: flex; flex-direction: column; align-items: center; gap: 16px;">
+                    <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(46,165,103,0.1); color: #2ea567; display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    </div>
+                    <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: #111;">Práctica Completada</h2>
+                    <p style="margin: 0; font-size: 15px; color: #555; line-height: 1.5;">
+                        Has finalizado este escenario en Modo Práctica. Esta sesión es formativa y no genera evaluación ni certificado.
+                    </p>
+                    <button id="cert-finish-btn" style="margin-top: 20px; padding: 10px 24px; border-radius: 8px; background: #111; color: white; font-weight: 600; font-size: 14px; border: none; cursor: pointer; transition: transform 150ms;">
+                        Finalizar y Volver
+                    </button>
+                </div>
+            `;
+        } else {
+            // Generating dummy leaderboard HTML 
+            const dummyPlayers = [
+                { name: 'Ana M.', score: 1450, time: '12s' },
+                { name: 'Carlos R.', score: 1220, time: '18s' },
+                { name: 'Sofía P.', score: 1180, time: '21s' },
+                { name: 'Javier T.', score: 950, time: '35s' },
+                { name: 'Laura Gómez', score: 840, time: '40s' }
+            ];
+            
+            let dummyHtml = '';
+            dummyPlayers.forEach((player, idx) => {
+                const color = idx < 3 ? 'var(--color-brand, #7c5cfc)' : '#566375';
+                dummyHtml += `
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-radius: 10px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 14px;">
+                            <div style="width: 28px; font-size: 14px; font-weight: 700; color: ${color}; text-align: center;">${idx + 1}</div>
+                            <div>
+                                <div style="font-size: 14px; font-weight: 600; color: #e2eaf4;">${player.name}</div>
+                                <div style="font-size: 11px; color: #8d9eb5;">Tiempo: ${player.time}</div>
+                            </div>
+                        </div>
+                        <div style="font-size: 15px; font-weight: 700; color: #8d9eb5; font-variant-numeric: tabular-nums;">
+                            ${player.score.toLocaleString()} pts
+                        </div>
+                    </div>
+                `;
+            });
+            
+            htmlContent = `
+            <div style="background: #11131a; border-radius: 20px; padding: 30px 40px; width: 94%; max-width: 700px; min-height: min(90vh, 550px); box-shadow: 0 25px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05) inset; display: flex; flex-direction: column; color: #fff; position: relative; overflow: hidden; font-family: 'Inter', sans-serif;">
+                <!-- Ambient Glow -->
+                <div style="position: absolute; top: -20%; left: -10%; width: 60%; height: 60%; background: radial-gradient(circle, rgba(124, 92, 252, 0.2) 0%, transparent 70%); pointer-events: none; filter: blur(40px);"></div>
+                <div style="position: absolute; bottom: -20%; right: -10%; width: 60%; height: 60%; background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, transparent 70%); pointer-events: none; filter: blur(40px);"></div>
+
+                <div style="text-align: center; z-index: 1; margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <div style="font-size: 14px; font-weight: 600; color: var(--color-brand, #7c5cfc); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 8px;">
+                        ${data.message || '¡Buen trabajo! Este es tu puntaje final.'}
+                    </div>
+                    <h1 style="margin: 0; font-size: clamp(28px, 4vw, 36px); font-weight: 800; letter-spacing: -0.02em; background: linear-gradient(to right, #fff, #a5b4fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                        ${data.title || 'Tabla de Posiciones'}
+                    </h1>
+                </div>
+
+                <div style="flex: 1; z-index: 1; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; padding-right: 8px;">
+                    <!-- Current User Score Highlight -->
+                    <div style="background: linear-gradient(90deg, rgba(124, 92, 252, 0.2) 0%, rgba(124, 92, 252, 0.05) 100%); border: 1px solid rgba(124, 92, 252, 0.4); border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                        <div style="display: flex; align-items: center; gap: 16px;">
+                            <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--color-brand, #7c5cfc); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: #fff;">
+                                ${initialName}
+                            </div>
+                            <div>
+                                <div style="font-size: 18px; font-weight: 700; color: #fff;">${participantName}</div>
+                                <div style="font-size: 12px; color: #a5b4fc;">${scoreMetrics.timeDiffSeconds || 0}s tiempo • ${scoreMetrics.errorCount || 0} errores</div>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 28px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums;">
+                                ${(scoreMetrics.finalScore || 0).toLocaleString()}
+                            </div>
+                            <div style="font-size: 11px; color: #a5b4fc; text-transform: uppercase; letter-spacing: 0.05em;">Puntos</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Dummy Leaderboard -->
+                    <div style="font-size: 12px; font-weight: 600; color: #8d9eb5; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 10px; padding-left: 10px; margin-bottom: 8px;">Top 5 Histórico</div>
+                    ${dummyHtml}
+                </div>
+
+                <button id="cert-finish-btn" style="margin-top: 30px; padding: 14px 32px; border-radius: 10px; background: var(--color-brand, #7c5cfc); color: white; font-weight: 600; font-size: 15px; border: none; cursor: pointer; box-shadow: 0 4px 14px rgba(124, 92, 252, 0.4); transition: transform 150ms, box-shadow 150ms; z-index: 1; align-self: center;">
+                    Finalizar y Volver
+                </button>
+            </div>
+            `;
+        }
+
+        wrap.innerHTML = htmlContent;
+
+        const btn = wrap.querySelector("#cert-finish-btn");
+        if(btn) {
+            btn.onmouseenter = () => { btn.style.transform = "translateY(-2px)"; btn.style.boxShadow = "0 6px 20px rgba(124, 92, 252, 0.6)"; };
+            btn.onmouseleave = () => { btn.style.transform = "translateY(0)"; btn.style.boxShadow = "0 4px 14px rgba(124, 92, 252, 0.4)"; };
+            btn.onclick = () => {
+                showSuccess("El simulador ha terminado exitosamente.");
+            };
         }
 
         elImageWrapper.innerHTML = "";

@@ -14,6 +14,7 @@ export default function usePreviewMode(nodes, edges, globalConfig) {
     const [transitioning, setTransitioning] = useState(false)
     const [isFullscreen, setIsFullscreen] = useState(false)
     const [timeRemaining, setTimeRemaining] = useState(null)
+    const [scoreMetrics, setScoreMetrics] = useState({ startTime: null, endTime: null, errorCount: 0, finalScore: 0 })
 
     const timerRef = useRef(null)
     const hasTimerStarted = useRef(false)
@@ -145,6 +146,7 @@ export default function usePreviewMode(nodes, edges, globalConfig) {
             onTriggerComplete(trigger.id, triggers)
         } else {
             setError('Texto incorrecto. Intenta de nuevo.')
+            setScoreMetrics(prev => ({ ...prev, errorCount: prev.errorCount + 1 }))
             setTimeout(() => setError(''), 2200)
         }
     }, [completedTriggers, inputValues, onTriggerComplete])
@@ -232,6 +234,44 @@ export default function usePreviewMode(nodes, edges, globalConfig) {
         }
     }, [currentNodeId, currentNode, globalConfig])
 
+    // Scoring Effect
+    useEffect(() => {
+        if (!currentNode) return
+
+        if (currentNode.type === 'authNode' || currentNode.data?.isStartNode) {
+            if (!scoreMetrics.startTime) {
+                setScoreMetrics(prev => ({ ...prev, startTime: Date.now() }))
+            }
+        }
+
+        if (currentNode.type === 'resultNode' || currentNode.type === 'rankingNode') {
+            setScoreMetrics(prev => {
+                if (prev.endTime) return prev; // ya calculado
+                
+                const endTime = Date.now()
+                const timeDiffSeconds = Math.floor((endTime - prev.startTime) / 1000)
+                
+                // --- Fórmula de Puntos ---
+                // Base: 1000 pts
+                // Penalización: -50 por error
+                // Bono: +10 pts por segundo restante (si hay countdown timerMin/Max)
+                // O -5 pts por cada segundo que se tardó en total (si no hay countdown)
+                
+                let timeBonus = 0
+                if (timeRemaining !== null && timeRemaining > 0) {
+                    timeBonus = timeRemaining * 10
+                } else {
+                    timeBonus = Math.max(0, 500 - (timeDiffSeconds * 2)) // Max 500 bono tiempo
+                }
+                
+                let finalScore = 1000 + timeBonus - (prev.errorCount * 50)
+                if (finalScore < 0) finalScore = 0
+
+                return { ...prev, endTime, finalScore, timeDiffSeconds }
+            })
+        }
+    }, [currentNode, scoreMetrics.startTime, timeRemaining])
+
     // Fullscreen behavior
     useEffect(() => {
         const handleFullscreenChange = () => {
@@ -252,7 +292,7 @@ export default function usePreviewMode(nodes, edges, globalConfig) {
     }
 
     return {
-        state: { currentNode, currentNodeId, stepIndex, totalSteps, nodeOrder, completedTriggers, inputValues, error, success, transitioning, isFullscreen, timeRemaining },
+        state: { currentNode, currentNodeId, stepIndex, totalSteps, nodeOrder, completedTriggers, inputValues, error, success, transitioning, isFullscreen, timeRemaining, scoreMetrics },
         refs: { containerRef, inputRefs },
         actions: {
             setError, setInputValues,
