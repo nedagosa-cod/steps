@@ -242,6 +242,28 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage
                     </label>
                 </div>
 
+                {(node.type === 'rankingNode' || data.type === 'rankingNode') && (
+                    <>
+                        <Divider label="Diseño del Ranking" />
+                        <div>
+                            <FieldLabel>Título de la Tabla</FieldLabel>
+                            <TextInput
+                                value={data.title ?? 'Tabla de Posiciones'}
+                                onChange={e => update({ title: e.target.value })}
+                                placeholder="Tabla de Posiciones"
+                            />
+                        </div>
+                        <div style={{ marginTop: 12 }}>
+                            <FieldLabel>Mensaje de Felicidad</FieldLabel>
+                            <TextInput
+                                value={data.message ?? '¡Buen trabajo! Este es tu puntaje final.'}
+                                onChange={e => update({ message: e.target.value })}
+                                placeholder="¡Buen trabajo!..."
+                            />
+                        </div>
+                    </>
+                )}
+
                 {isResult && (
                     <>
                         <Divider label="Diseño" />
@@ -389,21 +411,23 @@ export default function NodeConfigPanel({ node, onUpdateNode, nodes, onEditImage
                                     <div key={idx} style={{ position: 'relative', borderRadius: 7, overflow: 'hidden', border: '1px solid var(--color-border)', background: '#000' }}>
                                         <img src={src} alt={`segment-${idx}`} style={{ width: '100%', height: imageSegments.length > 1 ? 100 : 160, objectFit: 'cover', display: 'block', opacity: 0.8 }} />
 
-                                        {/* Edit Button */}
-                                        <button
-                                            onClick={() => onEditImage(idx)}
-                                            style={{
-                                                position: 'absolute', top: 8, left: 8,
-                                                background: 'var(--color-brand)', border: 'none',
-                                                borderRadius: 4, padding: '4px 8px',
-                                                display: 'flex', alignItems: 'center', gap: 6,
-                                                color: 'white', fontSize: 11, fontWeight: 600,
-                                                cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-                                                zIndex: 2
-                                            }}
-                                        >
-                                            ✏️ Editar {imageSegments.length > 1 ? `Tramo ${idx + 1}` : ''}
-                                        </button>
+                                        {/* Edit Button - Hide if it is a video even if mediaType is image */}
+                                        {!src.startsWith('data:video/') && !src.endsWith('.mp4') && !src.endsWith('.webm') && (
+                                            <button
+                                                onClick={() => onEditImage(idx)}
+                                                style={{
+                                                    position: 'absolute', top: 8, left: 8,
+                                                    background: 'var(--color-brand)', border: 'none',
+                                                    borderRadius: 4, padding: '4px 8px',
+                                                    display: 'flex', alignItems: 'center', gap: 6,
+                                                    color: 'white', fontSize: 11, fontWeight: 600,
+                                                    cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                                                    zIndex: 2
+                                                }}
+                                            >
+                                                ✏️ Editar {imageSegments.length > 1 ? `Tramo ${idx + 1}` : ''}
+                                            </button>
+                                        )}
 
                                         {/* Delete Button */}
                                         <button

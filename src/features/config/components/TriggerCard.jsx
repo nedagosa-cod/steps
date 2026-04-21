@@ -146,10 +146,10 @@ export function TriggerCard({
                     <div>
                         <FieldLabel>Posición sobre la imagen</FieldLabel>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
-                            <NumericInput label="X" value={hs.x} accentColor={colors.label} onChange={e => setHotspot('x', e.target.value)} />
-                            <NumericInput label="Y" value={hs.y} accentColor={colors.label} onChange={e => setHotspot('y', e.target.value)} />
-                            <NumericInput label="Ancho" value={hs.w} accentColor={colors.label} onChange={e => setHotspot('w', e.target.value)} />
-                            <NumericInput label="Alto" value={hs.h} accentColor={colors.label} onChange={e => setHotspot('h', e.target.value)} />
+                            <NumericInput label="X" value={hs.x} accentColor={colors.label} onChange={val => setHotspot('x', val)} />
+                            <NumericInput label="Y" value={hs.y} accentColor={colors.label} onChange={val => setHotspot('y', val)} />
+                            <NumericInput label="Ancho" value={hs.w} accentColor={colors.label} onChange={val => setHotspot('w', val)} />
+                            <NumericInput label="Alto" value={hs.h} accentColor={colors.label} onChange={val => setHotspot('h', val)} />
                         </div>
                     </div>
 
@@ -679,9 +679,9 @@ export function TriggerCard({
                                         <NumericInput
                                             value={trigger.dataColumnIndex || 2}
                                             accentColor={colors.label}
-                                            onChange={e => {
-                                                const val = parseInt(e.target.value) || 2;
-                                                onUpdate({ dataColumnIndex: Math.max(2, val) });
+                                            onChange={val => {
+                                                const parsed = parseInt(val) || 2;
+                                                onUpdate({ dataColumnIndex: Math.max(2, parsed) });
                                             }}
                                             min={2} max={10} step="1" suffix=" (Nivel)"
                                         />
@@ -984,7 +984,7 @@ export function TriggerCard({
                                         label="Tamaño de letra del input"
                                         value={trigger.fontSize || ''}
                                         accentColor={colors.label}
-                                        onChange={e => onUpdate({ fontSize: e.target.value ? parseInt(e.target.value) : null })}
+                                        onChange={val => onUpdate({ fontSize: val ? parseInt(val) : null })}
                                         min={8} max={72} step="1" suffix="px"
                                     />
                                     <label style={{
@@ -1011,7 +1011,7 @@ export function TriggerCard({
                                                 label="Tamaño de letra"
                                                 value={trigger.fontSize || ''}
                                                 accentColor={colors.label}
-                                                onChange={e => onUpdate({ fontSize: e.target.value ? parseInt(e.target.value) : null })}
+                                                onChange={val => onUpdate({ fontSize: val ? parseInt(val) : null })}
                                                 min={8} max={72} step="1" suffix="px"
                                             />
                                         </div>

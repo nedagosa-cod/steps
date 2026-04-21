@@ -625,11 +625,23 @@ export default function PreviewMode({ nodes, edges, globalConfig = {}, onExit })
                                     </button>
 
                                     {data.showScores !== false && (
-                                        <button disabled style={{
-                                            padding: '14px', borderRadius: 12, background: 'rgba(255,255,255,0.05)',
-                                            border: '1px solid rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)',
-                                            fontSize: 13, fontWeight: 600, cursor: 'not-allowed'
-                                        }}>
+                                        <button 
+                                            onClick={() => {
+                                                const rankingNode = nodes.find(n => n.type === 'rankingNode');
+                                                if (rankingNode) {
+                                                    actions.navigate(rankingNode.id);
+                                                } else {
+                                                    alert("No se encontró un nodo de Ranking en este flujo.");
+                                                }
+                                            }}
+                                            style={{
+                                                padding: '14px', borderRadius: 12, background: 'rgba(255,255,255,0.05)',
+                                                border: '1px solid rgba(255,255,255,0.15)', color: 'white',
+                                                fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 150ms'
+                                            }}
+                                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                                        >
                                             PUNTAJES
                                         </button>
                                     )}

@@ -1197,7 +1197,16 @@
 
         if (showScores) {
             const btnS = document.createElement("button");
-            btnS.className = "auth-btn auth-btn-scores"; btnS.textContent = "PUNTAJES"; btnS.disabled = true;
+            btnS.className = "auth-btn auth-btn-scores"; 
+            btnS.textContent = "PUNTAJES";
+            btnS.addEventListener("click", () => {
+                const rankingNode = nodes.find(n => n.type === 'rankingNode');
+                if (rankingNode) {
+                    navigate(rankingNode.id);
+                } else {
+                    alert("No se encontró un nodo de Ranking en este flujo.");
+                }
+            });
             btnsDiv.appendChild(btnS);
         }
 

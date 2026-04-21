@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
-import { fileURLToPath } from 'url';
+import { spawn } from 'child_process';
+import { fileURLToPath, URL } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -15,6 +15,25 @@ export default function exportExePlugin() {
     return {
         name: 'export-exe',
         configureServer(server) {
+            // ---- NUEVO ENDPOINT PARA DESCARGAR EL EXE ----
+            server.middlewares.use('/api/download-exe', (req, res) => {
+                if (req.method !== 'GET') return;
+                const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+                const filePath = url.searchParams.get('path');
+                
+                if (!filePath || !fs.existsSync(filePath)) {
+                    res.statusCode = 404;
+                    res.end('Archivo no encontrado');
+                    return;
+                }
+                
+                res.setHeader('Content-Disposition', 'attachment; filename="Simulador.exe"');
+                res.setHeader('Content-Type', 'application/octet-stream');
+                
+                const stream = fs.createReadStream(filePath);
+                stream.pipe(res);
+            });
+
             server.middlewares.use('/api/export-exe', async (req, res) => {
                 if (req.method !== 'POST') {
                     res.statusCode = 405;
@@ -22,12 +41,21 @@ export default function exportExePlugin() {
                     return;
                 }
 
+                // Streaming context
+                res.setHeader('Content-Type', 'application/json');
+                res.setHeader('Transfer-Encoding', 'chunked');
+
+                const writeProgress = (message) => {
+                    res.write(JSON.stringify({ status: 'progress', message }) + '\n');
+                };
+
                 // Read the JSON body
                 let body = '';
                 for await (const chunk of req) body += chunk;
 
                 try {
                     const { nodes, edges } = JSON.parse(body);
+                    writeProgress('Iniciando proceso de exportación a EXE...');
 
                     // ── Paths ─────────────────────────────────────────
                     const electronDir = path.join(ROOT, 'electron');
@@ -93,38 +121,62 @@ export default function exportExePlugin() {
                     fs.writeFileSync(path.join(alldataDir, 'data.js'), simDataJs, 'utf-8');
 
                     // ── Run electron-builder ──────────────────────────
-                    console.log('[export-exe] Running electron-builder...');
+                    writeProgress('Ejecutando proceso de empaquetado (esto puede tardar unos minutos)...');
                     const electronBuilderBin = path.join(ROOT, 'node_modules', '.bin', 'electron-builder');
 
-                    execSync(
-                        `"${electronBuilderBin}" --win portable --project "${electronDir}" --config.directories.output="${path.join(electronDir, 'dist')}"`,
-                        {
-                            cwd: electronDir,
-                            stdio: 'inherit',
-                            env: { ...process.env },
-                            timeout: 300000, // 5 min timeout
+                    const child = spawn(electronBuilderBin, [
+                        '--win', 'portable',
+                        '--project', electronDir,
+                        `--config.directories.output=${path.join(electronDir, 'dist')}`
+                    ], {
+                        cwd: electronDir,
+                        env: { ...process.env },
+                        shell: process.platform === 'win32' // Required to run node modules bins on Windows
+                    });
+
+                    child.stdout.on('data', (data) => {
+                        const str = data.toString();
+                        str.split('\n').forEach(line => {
+                            if (line.trim()) writeProgress(line.trim());
+                        });
+                    });
+
+                    child.stderr.on('data', (data) => {
+                        const str = data.toString();
+                        str.split('\n').forEach(line => {
+                            if (line.trim()) writeProgress(line.trim());
+                        });
+                    });
+
+                    child.on('close', (code) => {
+                        if (code !== 0) {
+                            res.write(JSON.stringify({ status: 'error', message: `El proceso falló con código ${code}` }) + '\n');
+                            res.end();
+                            return;
                         }
-                    );
 
-                    // ── Find the output .exe ──────────────────────────
-                    const distDir = path.join(electronDir, 'dist');
-                    const exeFiles = fs.readdirSync(distDir).filter(f => f.endsWith('.exe'));
-                    const outputPath = exeFiles.length > 0 ? path.join(distDir, exeFiles[0]) : distDir;
+                        // ── Find the output .exe ──────────────────────────
+                        const distDir = path.join(electronDir, 'dist');
+                        const exeFiles = fs.readdirSync(distDir).filter(f => f.endsWith('.exe'));
+                        const outputPath = exeFiles.length > 0 ? path.join(distDir, exeFiles[0]) : distDir;
 
-                    console.log('[export-exe] Build complete:', outputPath);
+                        writeProgress('¡Proceso de empaquetado finalizado con éxito!');
 
-                    res.setHeader('Content-Type', 'application/json');
-                    res.end(JSON.stringify({
-                        success: true,
-                        outputPath: outputPath,
-                        outputDir: distDir,
-                    }));
+                        res.write(JSON.stringify({
+                            status: 'done',
+                            outputPath: outputPath,
+                            outputDir: distDir,
+                        }) + '\n');
+                        res.end();
+                    });
 
                 } catch (err) {
                     console.error('[export-exe] Error:', err);
-                    res.statusCode = 500;
-                    res.setHeader('Content-Type', 'application/json');
-                    res.end(JSON.stringify({ error: err.message || 'Build failed' }));
+                    if (!res.headersSent) {
+                        res.statusCode = 500;
+                    }
+                    res.write(JSON.stringify({ status: 'error', message: err.message || 'Error en el proceso de empaquetado' }) + '\n');
+                    res.end();
                 }
             });
         }

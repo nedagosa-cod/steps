@@ -16,6 +16,8 @@ function DraggableWindowItem({ trigger, isDone, isBlocked, colors, completedTrig
         isDragging.current = true
         dragStart.current = { x: e.clientX, y: e.clientY }
         initialOffset.current = { ...offset }
+        document.body.style.userSelect = 'none'
+
         e.stopPropagation()
 
         const onPointerMove = (ev) => {
@@ -32,6 +34,7 @@ function DraggableWindowItem({ trigger, isDone, isBlocked, colors, completedTrig
             isDragging.current = false
             window.removeEventListener('pointermove', onPointerMove)
             window.removeEventListener('pointerup', onPointerUp)
+            document.body.style.userSelect = ''
         }
 
         window.addEventListener('pointermove', onPointerMove)
@@ -59,10 +62,10 @@ function DraggableWindowItem({ trigger, isDone, isBlocked, colors, completedTrig
             {/* Content Area */}
             <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
                 {trigger.contentImage ? (
-                    <img src={trigger.contentImage} alt="Ventana flotante" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} draggable={false} />
+                    <img src={trigger.contentImage} alt="Ventana flotante" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', userSelect: 'none' }} draggable={false} />
                 ) : (
                     !trigger.hidden && (
-                        <div style={{ padding: 10, textAlign: 'center', color: colors.label, fontSize: 11, minHeight: '100%' }}>
+                        <div style={{ padding: 10, textAlign: 'center', color: colors.label, fontSize: 11, minHeight: '100%', userSelect: 'none' }}>
                             [Ventana Flotante sin imagen]
                         </div>
                     )

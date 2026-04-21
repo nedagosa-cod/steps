@@ -52,6 +52,12 @@ export default function useImageEditor(imageUrl) {
 
         // Load background image
         if (imageUrl) {
+            const isVideo = imageUrl.startsWith('data:video/') || imageUrl.endsWith('.mp4') || imageUrl.endsWith('.webm');
+            if (isVideo) {
+                console.error("ImageEditor: Attempted to load a video URL as an image.");
+                return;
+            }
+
             fabric.Image.fromURL(imageUrl, { crossOrigin: 'anonymous' }).then((img) => {
                 // Scale image to fit canvas proportionally
                 const scaleX = c.width / img.width

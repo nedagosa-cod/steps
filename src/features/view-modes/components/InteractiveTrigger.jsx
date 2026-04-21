@@ -25,6 +25,8 @@ export function InteractiveTrigger({ trigger, index, onUpdate, containerRef, inn
         if (!containerRef.current) return
 
         actionRef.current = type
+        document.body.style.userSelect = 'none'
+
         const rect = containerRef.current.getBoundingClientRect()
         const startX = e.clientX
         const startY = e.clientY
@@ -54,6 +56,7 @@ export function InteractiveTrigger({ trigger, index, onUpdate, containerRef, inn
             window.removeEventListener('pointermove', onPointerMove)
             window.removeEventListener('pointerup', onPointerUp)
             actionRef.current = null
+            document.body.style.userSelect = ''
             onUpdate({ hotspot: localHsRef.current })
         }
 
@@ -86,30 +89,15 @@ export function InteractiveTrigger({ trigger, index, onUpdate, containerRef, inn
                     onPointerDown={e => e.stopPropagation()} // Let children handle their own clicks/drags, don't drag the parent
                 >
                     {trigger.contentImage ? (
-                        <img src={trigger.contentImage} alt="Contenido" style={{ width: '100%', height: trigger.type === 'floating_window' ? '100%' : 'auto', objectFit: trigger.type === 'floating_window' ? 'cover' : 'fill', display: 'block', pointerEvents: 'none' }} draggable={false} />
+                        <img src={trigger.contentImage} alt="Contenido" style={{ width: '100%', height: trigger.type === 'floating_window' ? '100%' : 'auto', objectFit: trigger.type === 'floating_window' ? 'cover' : 'fill', display: 'block', pointerEvents: 'none', userSelect: 'none' }} draggable={false} />
                     ) : (
-                        <div style={{ padding: 10, textAlign: 'center', color: colors.label, fontSize: 11, background: 'rgba(10,13,18,0.8)', minHeight: '100%' }}>
+                        <div style={{ padding: 10, textAlign: 'center', color: colors.label, fontSize: 11, background: 'rgba(10,13,18,0.8)', minHeight: '100%', userSelect: 'none' }}>
                             [{TRIGGER_LABELS[trigger.type]} sin imagen]
                         </div>
                     )}
 
-                    {/* Renderizar hijos recursivamente (SOLO VISUAL) */}
-                    {Array.isArray(trigger.triggers) && trigger.triggers.length > 0 && (
-                        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-                            {trigger.triggers.map((childTrigger, childIdx) => (
-                                <InteractiveTrigger
-                                    key={childTrigger.id || childIdx}
-                                    trigger={childTrigger}
-                                    index={childIdx}
-                                    // containerRect={rect} // Pass parent's rect for relative sizing if needed
-                                    isSelected={false} // Selection handled differently for children
-                                    onSelect={() => { }} // Cannot select children directly from canvas
-                                    onUpdate={() => { }} // Cannot edit children directly from canvas
-                                    isReadOnly={true}    // Children are read-only in this view
-                                />
-                            ))}
-                        </div>
-                    )}
+                    {/* Renderizar hijos proporcionados por FocusMode */}
+                    {children}
                 </div>
             )}
 

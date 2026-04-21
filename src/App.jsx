@@ -16,6 +16,7 @@ import './App.css'
 import ScreenNode from './features/nodes/ScreenNode'
 import AuthNode from './features/nodes/AuthNode'
 import ResultNode from './features/nodes/ResultNode'
+import RankingNode from './features/nodes/RankingNode'
 import ButtonEdge from './features/nodes/ButtonEdge'
 
 import ImageEditor from './features/editor/components/ImageEditor'
@@ -27,6 +28,7 @@ import FocusMode from './features/view-modes/components/FocusMode'
 
 import { exportSimulator } from './features/export/exporter'
 import { exportAsExe } from './features/export/exporterExe'
+import ExportProgressDialog from './features/export/components/ExportProgressDialog'
 
 // ── Shared ────────────────────────────────────────────────────
 import { TRIGGER_COLORS } from './shared/utils/triggers'
@@ -39,7 +41,7 @@ import RightSidebar from './shared/components/RightSidebar'
 import { Layers } from 'lucide-react'
 
 // Must be stable — defined outside component
-const nodeTypes = { screenNode: ScreenNode, authNode: AuthNode, resultNode: ResultNode }
+const nodeTypes = { screenNode: ScreenNode, authNode: AuthNode, resultNode: ResultNode, rankingNode: RankingNode }
 const edgeTypes = { buttonEdge: ButtonEdge }
 
 let nodeCounter = 1
@@ -63,6 +65,7 @@ export default function App() {
   const [isPreview, setIsPreview] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [isExportingExe, setIsExportingExe] = useState(false)
+  const [exeProgressMessages, setExeProgressMessages] = useState([])
   const [isFocusMode, setIsFocusMode] = useState(false)
   const [isEditingImage, setIsEditingImage] = useState(null) // null or index
   const [showImageBuilder, setShowImageBuilder] = useState(false)
@@ -128,8 +131,17 @@ export default function App() {
   const handleExportExe = useCallback(async () => {
     if (nodes.length === 0) return
     setIsExportingExe(true)
-    await exportAsExe(nodes, edges, globalConfig)
-    setIsExportingExe(false)
+    setExeProgressMessages([])
+    
+    const onProgress = (msg) => {
+        setExeProgressMessages(prev => [...prev, msg])
+    }
+
+    const res = await exportAsExe(nodes, edges, globalConfig, onProgress)
+    
+    if (res || !res) {
+        setTimeout(() => setIsExportingExe(false), 2000)
+    }
   }, [nodes, edges, globalConfig])
 
   const handleSaveProject = useCallback(() => {
@@ -240,6 +252,22 @@ export default function App() {
     setSelectedNode(n)
   }, [setNodes])
 
+  const addRankingNode = useCallback(() => {
+    const id = `node-${nodeCounter++}`
+    const n = {
+      id,
+      type: 'rankingNode',
+      position: { x: 120 + Math.random() * 280, y: 80 + Math.random() * 180 },
+      data: {
+        label: `Ranking ${nodeCounter - 1}`,
+        title: 'Tabla de Posiciones',
+        timerEnd: true
+      },
+    }
+    setNodes((nds) => [...nds, n])
+    setSelectedNode(n)
+  }, [setNodes])
+
   const deleteSelectedNode = useCallback(() => {
     if (!selectedNode) return
     setNodes((nds) => nds.filter((n) => n.id !== selectedNode.id))
@@ -304,6 +332,11 @@ export default function App() {
 
   return (
     <div className="app-root">
+      <ExportProgressDialog 
+        isOpen={isExportingExe} 
+        progressMessage={exeProgressMessages} 
+      />
+
       {isPreview && (
         <PreviewMode nodes={nodes} edges={edges} globalConfig={globalConfig} onExit={() => setIsPreview(false)} />
       )}
@@ -312,26 +345,35 @@ export default function App() {
         <ScrollImageBuilder onClose={() => setShowImageBuilder(false)} />
       )}
 
-      {isEditingImage !== null && selectedNode?.data?.image && (
-        <ImageEditor
-          imageUrl={
-            Array.isArray(selectedNode.data.image)
-              ? selectedNode.data.image[isEditingImage]
-              : selectedNode.data.image
-          }
-          onSave={(newImageStr) => {
-            if (Array.isArray(selectedNode.data.image)) {
-              const newArr = [...selectedNode.data.image]
-              newArr[isEditingImage] = newImageStr
-              onUpdateNode(selectedNode.id, { image: newArr })
-            } else {
-              onUpdateNode(selectedNode.id, { image: newImageStr })
-            }
-            setIsEditingImage(null)
-          }}
-          onCancel={() => setIsEditingImage(null)}
-        />
-      )}
+      {isEditingImage !== null && selectedNode?.data?.image && (() => {
+        const imageUrl = Array.isArray(selectedNode.data.image)
+          ? selectedNode.data.image[isEditingImage]
+          : selectedNode.data.image;
+        
+        // Final safety check: don't open editor if it looks like a video
+        const isVideo = imageUrl?.startsWith('data:video/') || imageUrl?.endsWith('.mp4') || imageUrl?.endsWith('.webm');
+        if (isVideo) {
+            setTimeout(() => setIsEditingImage(null), 0);
+            return null;
+        }
+
+        return (
+          <ImageEditor
+            imageUrl={imageUrl}
+            onSave={(newImageStr) => {
+              if (Array.isArray(selectedNode.data.image)) {
+                const newArr = [...selectedNode.data.image]
+                newArr[isEditingImage] = newImageStr
+                onUpdateNode(selectedNode.id, { image: newArr })
+              } else {
+                onUpdateNode(selectedNode.id, { image: newImageStr })
+              }
+              setIsEditingImage(null)
+            }}
+            onCancel={() => setIsEditingImage(null)}
+          />
+        );
+      })()}
 
       {showScrollLibrary && (
         <ScrollImageLibrary
@@ -352,6 +394,7 @@ export default function App() {
         addAuthNode={addAuthNode}
         addScreenNode={addScreenNode}
         addResultNode={addResultNode}
+        addRankingNode={addRankingNode}
         setShowScrollLibrary={setShowScrollLibrary}
         setScrollLibraryCallback={setScrollLibraryCallback}
         nodesCount={nodes.length}

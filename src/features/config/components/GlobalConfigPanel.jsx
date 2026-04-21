@@ -41,14 +41,14 @@ export default function GlobalConfigPanel({ config, onUpdate, nodes, edges }) {
                         label="Mínimo (seg)"
                         placeholder="Ej: 5"
                         value={config.timerMin}
-                        onChange={e => onUpdate({ timerMin: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                        onChange={val => onUpdate({ timerMin: val })}
                         min={0} step="1" suffix="s"
                     />
                     <NumericInput
                         label="Máximo (seg)"
                         placeholder="Ej: 30"
                         value={config.timerMax}
-                        onChange={e => onUpdate({ timerMax: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                        onChange={val => onUpdate({ timerMax: val })}
                         min={0} step="1" suffix="s"
                     />
                 </div>

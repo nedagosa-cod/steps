@@ -1,11 +1,12 @@
 import React from 'react'
-import { GitBranch, Plus, Award, GalleryHorizontalEnd, Trash2, UserCircle } from 'lucide-react'
+import { GitBranch, Plus, Award, GalleryHorizontalEnd, Trash2, UserCircle, Trophy } from 'lucide-react'
 import { ToolBtn } from './Buttons'
 
 export default function LeftSidebar({
     addAuthNode,
     addScreenNode,
     addResultNode,
+    addRankingNode,
     setShowScrollLibrary,
     setScrollLibraryCallback,
     nodesCount,
@@ -31,6 +32,10 @@ export default function LeftSidebar({
 
             <ToolBtn title="Añadir Certificado (Resultado)" onClick={addResultNode}>
                 <Award size={16} />
+            </ToolBtn>
+
+            <ToolBtn title="Añadir Ranking" onClick={addRankingNode}>
+                <Trophy size={16} />
             </ToolBtn>
 
             <ToolBtn
