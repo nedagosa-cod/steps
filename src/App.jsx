@@ -132,15 +132,15 @@ export default function App() {
     if (nodes.length === 0) return
     setIsExportingExe(true)
     setExeProgressMessages([])
-    
+
     const onProgress = (msg) => {
-        setExeProgressMessages(prev => [...prev, msg])
+      setExeProgressMessages(prev => [...prev, msg])
     }
 
     const res = await exportAsExe(nodes, edges, globalConfig, onProgress)
-    
+
     if (res || !res) {
-        setTimeout(() => setIsExportingExe(false), 2000)
+      setTimeout(() => setIsExportingExe(false), 2000)
     }
   }, [nodes, edges, globalConfig])
 
@@ -332,9 +332,9 @@ export default function App() {
 
   return (
     <div className="app-root">
-      <ExportProgressDialog 
-        isOpen={isExportingExe} 
-        progressMessage={exeProgressMessages} 
+      <ExportProgressDialog
+        isOpen={isExportingExe}
+        progressMessage={exeProgressMessages}
       />
 
       {isPreview && (
@@ -349,12 +349,12 @@ export default function App() {
         const imageUrl = Array.isArray(selectedNode.data.image)
           ? selectedNode.data.image[isEditingImage]
           : selectedNode.data.image;
-        
+
         // Final safety check: don't open editor if it looks like a video
         const isVideo = imageUrl?.startsWith('data:video/') || imageUrl?.endsWith('.mp4') || imageUrl?.endsWith('.webm');
         if (isVideo) {
-            setTimeout(() => setIsEditingImage(null), 0);
-            return null;
+          setTimeout(() => setIsEditingImage(null), 0);
+          return null;
         }
 
         return (

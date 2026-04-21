@@ -9,4 +9,9 @@ export default defineConfig({
     tailwindcss(),
     exportExePlugin(),
   ],
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: './src/setupTests.js',
+  }
 })
